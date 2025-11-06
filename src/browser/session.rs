@@ -1,5 +1,6 @@
 use crate::error::{BrowserError, Result};
 use crate::browser::config::{LaunchOptions, ConnectionOptions};
+use crate::dom::DomTree;
 use headless_chrome::{Browser, Tab};
 use std::sync::Arc;
 
@@ -154,6 +155,26 @@ impl BrowserSession {
             .map_err(|e| BrowserError::NavigationFailed(format!("Navigation timeout: {}", e)))?;
         
         Ok(())
+    }
+
+    /// Extract the DOM tree from the active tab
+    pub fn extract_dom(&self) -> Result<DomTree> {
+        DomTree::from_tab(&self.active_tab)
+    }
+
+    /// Extract and simplify the DOM tree from the active tab
+    pub fn extract_simplified_dom(&self) -> Result<DomTree> {
+        let mut tree = self.extract_dom()?;
+        tree.simplify();
+        Ok(tree)
+    }
+
+    /// Get element selector by index from the last extracted DOM
+    /// Note: You need to extract the DOM first using extract_dom()
+    pub fn find_element<'a>(&'a self, css_selector: &str) -> Result<headless_chrome::Element<'a>> {
+        self.active_tab
+            .find_element(css_selector)
+            .map_err(|e| BrowserError::ElementNotFound(format!("Element '{}' not found: {}", css_selector, e)))
     }
 }
 
