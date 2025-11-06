@@ -2,14 +2,13 @@ use crate::error::Result;
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 /// Parameters for the navigate tool
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NavigateParams {
     /// URL to navigate to
     pub url: String,
-    
+
     /// Wait for navigation to complete (default: true)
     #[serde(default = "default_wait")]
     pub wait_for_load: bool,
@@ -20,26 +19,21 @@ fn default_wait() -> bool {
 }
 
 /// Tool for navigating to a URL
+#[derive(Default)]
 pub struct NavigateTool;
 
 impl Tool for NavigateTool {
+    type Params = NavigateParams;
+
     fn name(&self) -> &str {
         "navigate"
     }
 
-    fn description(&self) -> &str {
-        "Navigate to a specified URL in the browser"
-    }
-
-    fn parameters_schema(&self) -> Value {
-        serde_json::to_value(schemars::schema_for!(NavigateParams)).unwrap_or_default()
-    }
-
-    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
-        // Parse parameters
-        let params: NavigateParams = serde_json::from_value(params)
-            .map_err(|e| crate::error::BrowserError::InvalidArgument(format!("Invalid navigate parameters: {}", e)))?;
-
+    fn execute_typed(
+        &self,
+        params: NavigateParams,
+        context: &mut ToolContext,
+    ) -> Result<ToolResult> {
         // Navigate to URL
         context.session.navigate(&params.url)?;
 
@@ -86,8 +80,6 @@ mod tests {
     fn test_navigate_tool_metadata() {
         let tool = NavigateTool;
         assert_eq!(tool.name(), "navigate");
-        assert!(!tool.description().is_empty());
-        
         let schema = tool.parameters_schema();
         assert!(schema.is_object());
     }

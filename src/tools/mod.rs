@@ -3,13 +3,22 @@
 //! This module provides a framework for browser automation tools and
 //! includes implementations of common browser operations.
 
-pub mod navigate;
 pub mod click;
-pub mod input;
-pub mod extract;
-pub mod screenshot;
 pub mod evaluate;
+pub mod extract;
+pub mod input;
+pub mod navigate;
+pub mod screenshot;
 pub mod wait;
+
+// Re-export Params types for use by MCP layer
+pub use click::ClickParams;
+pub use evaluate::EvaluateParams;
+pub use extract::ExtractParams;
+pub use input::InputParams;
+pub use navigate::NavigateParams;
+pub use screenshot::ScreenshotParams;
+pub use wait::WaitParams;
 
 use crate::browser::BrowserSession;
 use crate::dom::DomTree;
@@ -22,7 +31,7 @@ use std::sync::Arc;
 pub struct ToolContext<'a> {
     /// Browser session
     pub session: &'a BrowserSession,
-    
+
     /// Optional DOM tree (extracted on demand)
     pub dom_tree: Option<DomTree>,
 }
@@ -58,15 +67,15 @@ impl<'a> ToolContext<'a> {
 pub struct ToolResult {
     /// Whether the tool execution was successful
     pub success: bool,
-    
+
     /// Result data (JSON value)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
-    
+
     /// Error message if execution failed
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-    
+
     /// Additional metadata
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub metadata: HashMap<String, Value>,
@@ -110,24 +119,56 @@ impl ToolResult {
     }
 }
 
-/// Trait for browser automation tools
-pub trait Tool: Send + Sync {
+/// Trait for browser automation tools with associated parameter types
+pub trait Tool: Send + Sync + Default {
+    /// Associated parameter type for this tool
+    type Params: serde::Serialize + for<'de> serde::Deserialize<'de> + schemars::JsonSchema;
+
     /// Get tool name
     fn name(&self) -> &str;
 
-    /// Get tool description
-    fn description(&self) -> &str;
-
     /// Get tool parameter schema (JSON Schema)
-    fn parameters_schema(&self) -> Value;
+    fn parameters_schema(&self) -> Value {
+        serde_json::to_value(schemars::schema_for!(Self::Params)).unwrap_or_default()
+    }
 
-    /// Execute the tool
+    /// Execute the tool with strongly-typed parameters
+    fn execute_typed(&self, params: Self::Params, context: &mut ToolContext) -> Result<ToolResult>;
+
+    /// Execute the tool with JSON parameters (default implementation)
+    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
+        let typed_params: Self::Params = serde_json::from_value(params).map_err(|e| {
+            crate::error::BrowserError::InvalidArgument(format!("Invalid parameters: {}", e))
+        })?;
+        self.execute_typed(typed_params, context)
+    }
+}
+
+/// Type-erased tool trait for dynamic dispatch
+pub trait DynTool: Send + Sync {
+    fn name(&self) -> &str;
+    fn parameters_schema(&self) -> Value;
     fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult>;
+}
+
+/// Blanket implementation to convert any Tool into DynTool
+impl<T: Tool> DynTool for T {
+    fn name(&self) -> &str {
+        Tool::name(self)
+    }
+
+    fn parameters_schema(&self) -> Value {
+        Tool::parameters_schema(self)
+    }
+
+    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
+        Tool::execute(self, params, context)
+    }
 }
 
 /// Tool registry for managing and accessing tools
 pub struct ToolRegistry {
-    tools: HashMap<String, Arc<dyn Tool>>,
+    tools: HashMap<String, Arc<dyn DynTool>>,
 }
 
 impl ToolRegistry {
@@ -141,26 +182,27 @@ impl ToolRegistry {
     /// Create a registry with default tools
     pub fn with_defaults() -> Self {
         let mut registry = Self::new();
-        
+
         // Register default tools
-        registry.register(Arc::new(navigate::NavigateTool));
-        registry.register(Arc::new(click::ClickTool));
-        registry.register(Arc::new(input::InputTool));
-        registry.register(Arc::new(extract::ExtractContentTool));
-        registry.register(Arc::new(screenshot::ScreenshotTool));
-        registry.register(Arc::new(evaluate::EvaluateTool));
-        registry.register(Arc::new(wait::WaitTool));
-        
+        registry.register(navigate::NavigateTool);
+        registry.register(click::ClickTool);
+        registry.register(input::InputTool);
+        registry.register(extract::ExtractContentTool);
+        registry.register(screenshot::ScreenshotTool);
+        registry.register(evaluate::EvaluateTool);
+        registry.register(wait::WaitTool);
+
         registry
     }
 
     /// Register a tool
-    pub fn register(&mut self, tool: Arc<dyn Tool>) {
-        self.tools.insert(tool.name().to_string(), tool);
+    pub fn register<T: Tool + 'static>(&mut self, tool: T) {
+        let name = tool.name().to_string();
+        self.tools.insert(name, Arc::new(tool));
     }
 
     /// Get a tool by name
-    pub fn get(&self, name: &str) -> Option<&Arc<dyn Tool>> {
+    pub fn get(&self, name: &str) -> Option<&Arc<dyn DynTool>> {
         self.tools.get(name)
     }
 
@@ -175,7 +217,7 @@ impl ToolRegistry {
     }
 
     /// Get all tools
-    pub fn all_tools(&self) -> Vec<Arc<dyn Tool>> {
+    pub fn all_tools(&self) -> Vec<Arc<dyn DynTool>> {
         self.tools.values().cloned().collect()
     }
 
@@ -226,21 +268,20 @@ mod tests {
 
     #[test]
     fn test_tool_result_with_metadata() {
-        let result = ToolResult::success(None)
-            .with_metadata("duration_ms", serde_json::json!(100));
-        
+        let result = ToolResult::success(None).with_metadata("duration_ms", serde_json::json!(100));
+
         assert!(result.metadata.contains_key("duration_ms"));
     }
 
     #[test]
     fn test_tool_registry() {
         let registry = ToolRegistry::with_defaults();
-        
+
         assert!(registry.has("navigate"));
         assert!(registry.has("click"));
         assert!(registry.has("input"));
         assert!(!registry.has("nonexistent"));
-        
+
         assert!(registry.count() >= 7); // At least 7 default tools
     }
 
@@ -248,7 +289,7 @@ mod tests {
     fn test_tool_registry_list() {
         let registry = ToolRegistry::with_defaults();
         let names = registry.list_names();
-        
+
         assert!(names.contains(&"navigate".to_string()));
         assert!(names.contains(&"click".to_string()));
     }

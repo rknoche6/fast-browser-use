@@ -9,7 +9,7 @@ path = "src/bin/browser-use.rs"
 required-features = ["mcp-server"]
 
 [features]
-default = []
+default = ["mcp-server"]
 mcp-server = [
     "rmcp/macros",
     "rmcp/server",

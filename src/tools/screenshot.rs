@@ -2,7 +2,6 @@ use crate::error::{BrowserError, Result};
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ScreenshotParams {
@@ -14,25 +13,21 @@ pub struct ScreenshotParams {
     pub full_page: bool,
 }
 
+#[derive(Default)]
 pub struct ScreenshotTool;
 
 impl Tool for ScreenshotTool {
+    type Params = ScreenshotParams;
+
     fn name(&self) -> &str {
         "screenshot"
     }
 
-    fn description(&self) -> &str {
-        "Capture a screenshot of the current page"
-    }
-
-    fn parameters_schema(&self) -> Value {
-        serde_json::to_value(schemars::schema_for!(ScreenshotParams)).unwrap_or_default()
-    }
-
-    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
-        let params: ScreenshotParams = serde_json::from_value(params)
-            .map_err(|e| BrowserError::InvalidArgument(e.to_string()))?;
-
+    fn execute_typed(
+        &self,
+        params: ScreenshotParams,
+        context: &mut ToolContext,
+    ) -> Result<ToolResult> {
         let screenshot_data = context
             .session
             .tab()

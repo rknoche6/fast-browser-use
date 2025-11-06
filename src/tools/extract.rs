@@ -2,7 +2,6 @@ use crate::error::{BrowserError, Result};
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ExtractParams {
@@ -19,25 +18,17 @@ fn default_format() -> String {
     "text".to_string()
 }
 
+#[derive(Default)]
 pub struct ExtractContentTool;
 
 impl Tool for ExtractContentTool {
+    type Params = ExtractParams;
+
     fn name(&self) -> &str {
         "extract"
     }
 
-    fn description(&self) -> &str {
-        "Extract text or HTML content from the page or an element"
-    }
-
-    fn parameters_schema(&self) -> Value {
-        serde_json::to_value(schemars::schema_for!(ExtractParams)).unwrap_or_default()
-    }
-
-    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
-        let params: ExtractParams = serde_json::from_value(params)
-            .map_err(|e| BrowserError::InvalidArgument(e.to_string()))?;
-
+    fn execute_typed(&self, params: ExtractParams, context: &mut ToolContext) -> Result<ToolResult> {
         let content = if let Some(selector) = &params.selector {
             let element = context.session.find_element(selector)?;
             

@@ -2,7 +2,6 @@ use crate::error::{BrowserError, Result};
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 /// Parameters for the click tool
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -28,29 +27,22 @@ pub enum ElementSelector {
 }
 
 /// Tool for clicking elements
+#[derive(Default)]
 pub struct ClickTool;
 
 impl Tool for ClickTool {
+    type Params = ClickParams;
+
     fn name(&self) -> &str {
         "click"
     }
 
-    fn description(&self) -> &str {
-        "Click on an element specified by CSS selector or index"
-    }
-
-    fn parameters_schema(&self) -> Value {
-        serde_json::to_value(schemars::schema_for!(ClickParams)).unwrap_or_default()
-    }
-
-    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
-        let params: ClickParams = serde_json::from_value(params)
-            .map_err(|e| BrowserError::InvalidArgument(format!("Invalid click parameters: {}", e)))?;
-
+    fn execute_typed(&self, params: ClickParams, context: &mut ToolContext) -> Result<ToolResult> {
         match params.selector {
             ElementSelector::Css { selector } => {
                 let element = context.session.find_element(&selector)?;
-                element.click()
+                element
+                    .click()
                     .map_err(|e| BrowserError::ToolExecutionFailed {
                         tool: "click".to_string(),
                         reason: e.to_string(),
@@ -64,13 +56,15 @@ impl Tool for ClickTool {
             ElementSelector::Index { index } => {
                 let css_selector = {
                     let dom = context.get_dom()?;
-                    let selector_info = dom.get_selector(index)
-                        .ok_or_else(|| BrowserError::ElementNotFound(format!("No element with index {}", index)))?;
+                    let selector_info = dom.get_selector(index).ok_or_else(|| {
+                        BrowserError::ElementNotFound(format!("No element with index {}", index))
+                    })?;
                     selector_info.css_selector.clone()
                 };
 
                 let element = context.session.find_element(&css_selector)?;
-                element.click()
+                element
+                    .click()
                     .map_err(|e| BrowserError::ToolExecutionFailed {
                         tool: "click".to_string(),
                         reason: e.to_string(),

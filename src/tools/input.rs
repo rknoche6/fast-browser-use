@@ -2,7 +2,6 @@ use crate::error::{BrowserError, Result};
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct InputParams {
@@ -17,25 +16,17 @@ pub struct InputParams {
     pub clear: bool,
 }
 
+#[derive(Default)]
 pub struct InputTool;
 
 impl Tool for InputTool {
+    type Params = InputParams;
+
     fn name(&self) -> &str {
         "input"
     }
 
-    fn description(&self) -> &str {
-        "Type text into an input element"
-    }
-
-    fn parameters_schema(&self) -> Value {
-        serde_json::to_value(schemars::schema_for!(InputParams)).unwrap_or_default()
-    }
-
-    fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
-        let params: InputParams = serde_json::from_value(params)
-            .map_err(|e| BrowserError::InvalidArgument(e.to_string()))?;
-
+    fn execute_typed(&self, params: InputParams, context: &mut ToolContext) -> Result<ToolResult> {
         let element = context.session.find_element(&params.selector)?;
         
         if params.clear {
