@@ -119,7 +119,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let service = BrowserServer::with_options(options.clone())
                 .map_err(|e| format!("Failed to create browser server: {}", e))?;
             let server = service.serve(stdio()).await?;
-            server.waiting().await?;
+            let quit_reason = server.waiting().await?;
+            eprintln!("Server quit with reason: {:?}", quit_reason);
+            // Give a small delay for destructors to complete
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            eprintln!("Cleanup complete, exiting...");
         }
         Transport::Sse => {
             eprintln!("Transport: SSE");
