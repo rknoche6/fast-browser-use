@@ -10,14 +10,22 @@ use rmcp::{ServiceExt, transport::stdio};
 use std::io::{stdin, stdout};
 
 #[cfg(feature = "mcp-server")]
-use rmcp::transport::streamable_http_server::{
-    StreamableHttpService, session::local::LocalSessionManager,
+use rmcp::transport::{
+    sse_server::{SseServer, SseServerConfig},
+    streamable_http_server::{
+        StreamableHttpService, session::local::LocalSessionManager,
+    },
 };
+
+#[cfg(feature = "mcp-server")]
+use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum Transport {
     /// Standard input/output transport (default)
     Stdio,
+    /// Server-Sent Events transport
+    Sse,
     /// HTTP streamable transport
     Http,
 }
@@ -51,9 +59,17 @@ struct Cli {
     #[arg(long, short = 't', value_enum, default_value = "stdio")]
     transport: Transport,
 
-    /// Port for HTTP transport (default: 3000)
+    /// Port for SSE or HTTP transport (default: 3000)
     #[arg(long, short = 'p', default_value = "3000")]
     port: u16,
+
+    /// SSE endpoint path (default: /sse)
+    #[arg(long, default_value = "/sse")]
+    sse_path: String,
+
+    /// SSE POST path for messages (default: /message)
+    #[arg(long, default_value = "/message")]
+    sse_post_path: String,
 
     /// HTTP streamable endpoint path (default: /mcp)
     #[arg(long, default_value = "/mcp")]
@@ -108,6 +124,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let (_read, _write) = (stdin(), stdout());
             let server = service.serve(stdio()).await?;
             server.waiting().await?;
+        }
+        Transport::Sse => {
+            eprintln!("Transport: SSE");
+            eprintln!("Port: {}", cli.port);
+            eprintln!("SSE path: {}", cli.sse_path);
+            eprintln!("SSE POST path: {}", cli.sse_post_path);
+
+            let bind_addr = format!("127.0.0.1:{}", cli.port);
+            
+            // Create SSE server configuration
+            let config = SseServerConfig {
+                bind: bind_addr.parse()?,
+                sse_path: cli.sse_path.clone(),
+                post_path: cli.sse_post_path.clone(),
+                ct: CancellationToken::new(),
+                sse_keep_alive: None,
+            };
+
+            // Create SSE server and router
+            let (sse_server, router) = SseServer::new(config);
+
+            eprintln!(
+                "Ready to accept MCP connections at http://{}{}",
+                bind_addr, cli.sse_path
+            );
+
+            // Register service factory for each connection
+            let _cancellation_token = sse_server.with_service(move || {
+                BrowserServer::with_options(options.clone())
+                    .expect("Failed to create browser server")
+            });
+
+            // Start HTTP server with SSE router
+            let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
+            axum::serve(listener, router.into_make_service()).await?;
         }
         Transport::Http => {
             eprintln!("Transport: HTTP streamable");
