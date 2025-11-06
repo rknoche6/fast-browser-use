@@ -109,6 +109,7 @@ trait Tool {
 - All tools work on the active tab; use `switch_tab()` to change context
 - Element indices are only valid for the specific DOM extraction they came from
 - Re-extracting the DOM rebuilds the `SelectorMap` and reassigns all indices
+- **When writing JavaScript to be executed in the browser, always use `JSON.stringify()` to ensure the result is returned properly** - this prevents issues with complex objects and ensures consistent serialization
 
 ## Crate Dependencies
 

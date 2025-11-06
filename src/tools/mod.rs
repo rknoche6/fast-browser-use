@@ -9,6 +9,7 @@ pub mod extract;
 pub mod input;
 pub mod markdown;
 pub mod navigate;
+pub mod read_links;
 pub mod screenshot;
 pub mod wait;
 
@@ -19,6 +20,7 @@ pub use extract::ExtractParams;
 pub use input::InputParams;
 pub use markdown::GetMarkdownParams;
 pub use navigate::NavigateParams;
+pub use read_links::ReadLinksParams;
 pub use screenshot::ScreenshotParams;
 pub use wait::WaitParams;
 
@@ -194,6 +196,7 @@ impl ToolRegistry {
         registry.register(evaluate::EvaluateTool);
         registry.register(wait::WaitTool);
         registry.register(markdown::GetMarkdownTool);
+        registry.register(read_links::ReadLinksTool);
 
         registry
     }
@@ -285,7 +288,7 @@ mod tests {
         assert!(registry.has("input"));
         assert!(!registry.has("nonexistent"));
 
-        assert!(registry.count() >= 8); // At least 8 default tools
+        assert!(registry.count() >= 9); // At least 9 default tools
     }
 
     #[test]

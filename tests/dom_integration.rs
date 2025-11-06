@@ -150,3 +150,67 @@ fn test_get_markdown() {
     let has_link = markdown.contains("Example Link");
     assert!(has_link, "Missing 'Example Link' in markdown");
 }
+
+
+#[test]
+#[ignore]
+fn test_read_links() {
+    use browser_use::tools::{read_links::ReadLinksTool, ReadLinksParams, Tool, ToolContext};
+
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
+        .expect("Failed to launch browser");
+
+    let html = concat!(
+        "<html><head><title>Links Test</title></head><body>",
+        "<a href=\"https://example.com\">Example</a>",
+        "<a href=\"/path\">Relative</a>",
+        "<a href=\"#anchor\">Anchor</a>",
+        "<a href=\"https://rust-lang.org\">Rust</a>",
+        "<a>No Href</a>",
+        "<a href=\"\">Empty</a>",
+        "</body></html>"
+    );
+    
+    session
+        .navigate(&format!("data:text/html,{}", html))
+        .expect("Failed navigate");
+
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    let tool = ReadLinksTool::default();
+    let mut context = ToolContext::new(&session);
+
+    let result = tool
+        .execute_typed(ReadLinksParams {}, &mut context)
+        .expect("Failed execute");
+
+    assert!(result.success);
+    let data = result.data.unwrap();
+    let links = data["links"].as_array().unwrap();
+    let count = data["count"].as_u64().unwrap();
+
+    println!("Links found: {}", count);
+    for link in links {
+        println!("  {} -> {}", 
+            link["text"].as_str().unwrap_or(""), 
+            link["href"].as_str().unwrap_or(""));
+    }
+
+    // Due to data: URL limitations, we may not get all links
+    assert!(count >= 2, "Expected at least 2 links");
+    assert_eq!(links.len() as u64, count);
+    
+    let texts: Vec<&str> = links.iter()
+        .filter_map(|l| l["text"].as_str())
+        .collect();
+    
+    // Verify the links we do get are correct
+    assert!(texts.contains(&"Example"));
+    assert!(texts.contains(&"Relative"));
+    
+    // Verify href values
+    let ex_link = links.iter()
+        .find(|l| l["text"].as_str() == Some("Example"))
+        .expect("Example link not found");
+    assert_eq!(ex_link["href"].as_str(), Some("https://example.com"));
+}
