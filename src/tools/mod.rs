@@ -7,6 +7,7 @@ pub mod click;
 pub mod evaluate;
 pub mod extract;
 pub mod input;
+pub mod markdown;
 pub mod navigate;
 pub mod screenshot;
 pub mod wait;
@@ -16,6 +17,7 @@ pub use click::ClickParams;
 pub use evaluate::EvaluateParams;
 pub use extract::ExtractParams;
 pub use input::InputParams;
+pub use markdown::GetMarkdownParams;
 pub use navigate::NavigateParams;
 pub use screenshot::ScreenshotParams;
 pub use wait::WaitParams;
@@ -191,6 +193,7 @@ impl ToolRegistry {
         registry.register(screenshot::ScreenshotTool);
         registry.register(evaluate::EvaluateTool);
         registry.register(wait::WaitTool);
+        registry.register(markdown::GetMarkdownTool);
 
         registry
     }
@@ -282,7 +285,7 @@ mod tests {
         assert!(registry.has("input"));
         assert!(!registry.has("nonexistent"));
 
-        assert!(registry.count() >= 7); // At least 7 default tools
+        assert!(registry.count() >= 8); // At least 8 default tools
     }
 
     #[test]

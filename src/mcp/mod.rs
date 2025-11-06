@@ -60,4 +60,5 @@ register_mcp_tools! {
     browser_screenshot => tools::screenshot::ScreenshotTool, "Capture a screenshot of the current page";
     browser_evaluate => tools::evaluate::EvaluateTool, "Execute JavaScript code in the browser context";
     browser_wait => tools::wait::WaitTool, "Wait for an element to appear on the page";
+    browser_get_markdown => tools::markdown::GetMarkdownTool, "Get the markdown content of the current page";
 }
