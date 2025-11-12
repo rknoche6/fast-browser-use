@@ -1,5 +1,7 @@
 # browser-use
 
+[中文文档](README_CN.md)
+
 A lightweight Rust library for browser automation via Chrome DevTools Protocol (CDP).
 
 ## ✨ Highlights
