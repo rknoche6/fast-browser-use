@@ -54,7 +54,6 @@ macro_rules! register_mcp_tools {
 // 以下未实现：
 // browser_go_back
 // browser_go_forward
-// browser_new_tab
 // browser_tab_list
 // browser_switch_tab
 // browser_close_tab
@@ -77,4 +76,5 @@ register_mcp_tools! {
     browser_read_links => tools::read_links::ReadLinksTool, "Read all links on the current page";
     browser_get_clickable_elements => tools::get_clickable_elements::GetClickableElementsTool, "Get all clickable/interactive elements on the page";
     browser_press_key => tools::press_key::PressKeyTool, "Press a key on the keyboard";
+    browser_new_tab => tools::new_tab::NewTabTool, "Open a new tab and navigate to the specified URL";
 }

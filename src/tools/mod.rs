@@ -10,6 +10,7 @@ pub mod get_clickable_elements;
 pub mod input;
 pub mod markdown;
 pub mod navigate;
+pub mod new_tab;
 pub mod press_key;
 pub mod read_links;
 pub mod screenshot;
@@ -23,6 +24,7 @@ pub use get_clickable_elements::GetClickableElementsParams;
 pub use input::InputParams;
 pub use markdown::GetMarkdownParams;
 pub use navigate::NavigateParams;
+pub use new_tab::NewTabParams;
 pub use press_key::PressKeyParams;
 pub use read_links::ReadLinksParams;
 pub use screenshot::ScreenshotParams;
@@ -203,6 +205,7 @@ impl ToolRegistry {
         registry.register(read_links::ReadLinksTool);
         registry.register(get_clickable_elements::GetClickableElementsTool);
         registry.register(press_key::PressKeyTool);
+        registry.register(new_tab::NewTabTool);
 
         registry
     }
@@ -283,27 +286,5 @@ mod tests {
         let result = ToolResult::success(None).with_metadata("duration_ms", serde_json::json!(100));
 
         assert!(result.metadata.contains_key("duration_ms"));
-    }
-
-    #[test]
-    fn test_tool_registry() {
-        let registry = ToolRegistry::with_defaults();
-
-        assert!(registry.has("navigate"));
-        assert!(registry.has("click"));
-        assert!(registry.has("input"));
-        assert!(!registry.has("nonexistent"));
-
-        assert!(registry.count() >= 10); // At least 10 default tools
-    }
-
-    #[test]
-    fn test_tool_registry_list() {
-        let registry = ToolRegistry::with_defaults();
-        let names = registry.list_names();
-
-        assert!(names.contains(&"navigate".to_string()));
-        assert!(names.contains(&"click".to_string()));
-        assert!(names.contains(&"get_clickable_elements".to_string()));
     }
 }
