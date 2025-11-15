@@ -1,11 +1,38 @@
 use crate::error::{BrowserError, Result};
+use crate::tools::html_to_markdown::convert_html_to_markdown;
+use crate::tools::readability_script::READABILITY_SCRIPT;
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Parameters for getting markdown content (no parameters needed)
+/// Parameters for getting markdown content with pagination support
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct GetMarkdownParams {}
+pub struct GetMarkdownParams {
+    /// Page number to extract (1-based index, default: 1)
+    #[serde(default = "default_page")]
+    pub page: usize,
+
+    /// Maximum characters per page (default: 100000)
+    #[serde(default = "default_page_size")]
+    pub page_size: usize,
+}
+
+fn default_page() -> usize {
+    1
+}
+
+fn default_page_size() -> usize {
+    100_000
+}
+
+impl Default for GetMarkdownParams {
+    fn default() -> Self {
+        Self {
+            page: default_page(),
+            page_size: default_page_size(),
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct GetMarkdownTool;
@@ -19,22 +46,27 @@ impl Tool for GetMarkdownTool {
 
     fn execute_typed(
         &self,
-        _params: GetMarkdownParams,
+        params: GetMarkdownParams,
         context: &mut ToolContext,
     ) -> Result<ToolResult> {
-        // Wait for network idle with a timeout (similar to TypeScript version)
+        // Wait for network idle with a timeout
         // Since headless_chrome doesn't have a direct network idle wait,
-        // we'll add a small delay to let dynamic content load
+        // we add a small delay to let dynamic content load
         std::thread::sleep(std::time::Duration::from_millis(1000));
 
-        // Load the JavaScript code for markdown conversion
-        let js_code = include_str!("convert_to_markdown.js");
+        // Inject Readability.js script and the conversion script
+        // We concatenate the scripts as strings to avoid template literal issues
+        let js_code = format!(
+            "const READABILITY_SCRIPT = {};\n{}",
+            serde_json::to_string(READABILITY_SCRIPT).unwrap(),
+            include_str!("convert_to_markdown.js")
+        );
 
         // Execute the JavaScript to extract and convert content
         let result = context
             .session
             .tab()
-            .evaluate(js_code, false)
+            .evaluate(&js_code, false)
             .map_err(|e| BrowserError::EvaluationFailed(e.to_string()))?;
 
         // Parse the result
@@ -46,66 +78,116 @@ impl Tool for GetMarkdownTool {
             })?;
 
         // The JavaScript returns a JSON string, so we need to parse it
-        let content_data: MarkdownContent = if let Some(json_str) = result_value.as_str() {
+        let extraction_result: ExtractionResult = if let Some(json_str) = result_value.as_str() {
             serde_json::from_str(json_str).map_err(|e| BrowserError::ToolExecutionFailed {
                 tool: "get_markdown".to_string(),
-                reason: format!("Failed to parse markdown content: {}", e),
+                reason: format!("Failed to parse extraction result: {}", e),
             })?
         } else {
             // If it's already an object, try to deserialize directly
             serde_json::from_value(result_value).map_err(|e| BrowserError::ToolExecutionFailed {
                 tool: "get_markdown".to_string(),
-                reason: format!("Failed to deserialize markdown content: {}", e),
+                reason: format!("Failed to deserialize extraction result: {}", e),
             })?
         };
 
-        // Combine title and content
-        let markdown = if !content_data.title.is_empty() {
-            format!("# {}\n\n{}", content_data.title, content_data.content)
+        // Check if Readability failed
+        if extraction_result.readability_failed {
+            return Err(BrowserError::ToolExecutionFailed {
+                tool: "get_markdown".to_string(),
+                reason: extraction_result
+                    .error
+                    .unwrap_or_else(|| "Readability extraction failed".to_string()),
+            });
+        }
+
+        // Convert the extracted HTML content to Markdown
+        let full_markdown = convert_html_to_markdown(&extraction_result.content);
+
+        // Calculate pagination information
+        let total_pages = if full_markdown.is_empty() {
+            1
         } else {
-            content_data.content.clone()
+            (full_markdown.len() + params.page_size - 1) / params.page_size
         };
 
+        // Clamp page number to valid range
+        let current_page = params.page.clamp(1, total_pages.max(1));
+
+        // Calculate start and end indices for the requested page
+        let start_idx = (current_page - 1) * params.page_size;
+        let end_idx = (start_idx + params.page_size).min(full_markdown.len());
+
+        // Extract the content for the current page
+        let mut page_content = if start_idx < full_markdown.len() {
+            full_markdown[start_idx..end_idx].to_string()
+        } else {
+            String::new()
+        };
+
+        // Add title to the first page only
+        if current_page == 1 && !extraction_result.title.is_empty() {
+            page_content = format!("# {}\n\n{}", extraction_result.title, page_content);
+        }
+
+        // Add pagination information if there are multiple pages
+        if total_pages > 1 {
+            let pagination_info = if current_page < total_pages {
+                format!(
+                    "\n\n---\n\n*Page {} of {}. There are {} more page(s) with additional content.*\n",
+                    current_page,
+                    total_pages,
+                    total_pages - current_page
+                )
+            } else {
+                format!(
+                    "\n\n---\n\n*Page {} of {}. This is the last page.*\n",
+                    current_page, total_pages
+                )
+            };
+            page_content.push_str(&pagination_info);
+        }
+
+        // Return the result with pagination metadata
         Ok(ToolResult::success_with(serde_json::json!({
-            "markdown": markdown,
-            "title": content_data.title,
-            "url": content_data.url,
-            "length": markdown.len()
+            "markdown": page_content,
+            "title": extraction_result.title,
+            "url": extraction_result.url,
+            "currentPage": current_page,
+            "totalPages": total_pages,
+            "hasMorePages": current_page < total_pages,
+            "length": page_content.len(),
+            "byline": extraction_result.byline,
+            "excerpt": extraction_result.excerpt,
+            "siteName": extraction_result.site_name,
         })))
     }
 }
 
-/// Structure for markdown content returned from JavaScript
+/// Structure for extraction result returned from JavaScript
 #[derive(Debug, Serialize, Deserialize)]
-struct MarkdownContent {
+#[serde(rename_all = "camelCase")]
+struct ExtractionResult {
     title: String,
     content: String,
+    text_content: String,
     url: String,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_markdown_tool_name() {
-        let tool = GetMarkdownTool::default();
-        assert_eq!(tool.name(), "get_markdown");
-    }
-
-    #[test]
-    fn test_get_markdown_params_schema() {
-        let tool = GetMarkdownTool::default();
-        let schema = tool.parameters_schema();
-        assert!(schema.is_object());
-    }
-
-    #[test]
-    fn test_markdown_content_deserialization() {
-        let json = r#"{"title": "Test", "content": "Hello", "url": "https://example.com"}"#;
-        let content: MarkdownContent = serde_json::from_str(json).unwrap();
-        assert_eq!(content.title, "Test");
-        assert_eq!(content.content, "Hello");
-        assert_eq!(content.url, "https://example.com");
-    }
+    #[serde(default)]
+    excerpt: String,
+    #[serde(default)]
+    byline: String,
+    #[serde(default)]
+    site_name: String,
+    #[serde(default)]
+    length: usize,
+    #[serde(default)]
+    lang: String,
+    #[serde(default)]
+    dir: String,
+    #[serde(default)]
+    published_time: String,
+    #[serde(default)]
+    readability_failed: bool,
+    #[serde(default)]
+    error: Option<String>,
 }

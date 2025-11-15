@@ -1,183 +1,100 @@
-// JavaScript code to convert HTML to markdown and extract page content
-// Returns JSON string with title and markdown content
-JSON.stringify((function() {
-    // Simple HTML to Markdown converter
-    function htmlToMarkdown(element) {
-        if (!element) return '';
-        
-        const tagName = element.tagName ? element.tagName.toLowerCase() : '';
-        
-        // Skip unwanted elements
-        if (['script', 'style', 'noscript', 'meta', 'link', 'iframe'].includes(tagName)) {
-            return '';
+// Enhanced JavaScript code to convert HTML to markdown using Mozilla Readability
+// Based on UI-TARS implementation
+// Returns JSON string with title, HTML content, and metadata
+
+(function() {
+    try {
+        // Load Readability constructor from the injected script
+        // The script should be injected as READABILITY_SCRIPT constant
+        if (typeof READABILITY_SCRIPT === 'undefined') {
+            throw new Error('READABILITY_SCRIPT not defined. Readability.js must be injected first.');
         }
         
-        // Handle text nodes
-        if (element.nodeType === Node.TEXT_NODE) {
-            const text = element.textContent.trim();
-            return text ? text + ' ' : '';
-        }
-        
-        let markdown = '';
-        
-        // Process based on tag type
-        switch (tagName) {
-            case 'h1':
-                markdown = '\n# ' + getTextContent(element) + '\n\n';
-                break;
-            case 'h2':
-                markdown = '\n## ' + getTextContent(element) + '\n\n';
-                break;
-            case 'h3':
-                markdown = '\n### ' + getTextContent(element) + '\n\n';
-                break;
-            case 'h4':
-                markdown = '\n#### ' + getTextContent(element) + '\n\n';
-                break;
-            case 'h5':
-                markdown = '\n##### ' + getTextContent(element) + '\n\n';
-                break;
-            case 'h6':
-                markdown = '\n###### ' + getTextContent(element) + '\n\n';
-                break;
-            case 'p':
-                markdown = getTextContent(element) + '\n\n';
-                break;
-            case 'br':
-                markdown = '\n';
-                break;
-            case 'hr':
-                markdown = '\n---\n\n';
-                break;
-            case 'strong':
-            case 'b':
-                markdown = '**' + getTextContent(element) + '**';
-                break;
-            case 'em':
-            case 'i':
-                markdown = '*' + getTextContent(element) + '*';
-                break;
-            case 'code':
-                if (element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
-                    return ''; // Handled by pre tag
-                }
-                markdown = '`' + getTextContent(element) + '`';
-                break;
-            case 'pre':
-                const codeElement = element.querySelector('code');
-                const code = codeElement ? codeElement.textContent : element.textContent;
-                markdown = '\n```\n' + code + '\n```\n\n';
-                break;
-            case 'a':
-                const href = element.getAttribute('href') || '';
-                const linkText = getTextContent(element);
-                markdown = '[' + linkText + '](' + href + ')';
-                break;
-            case 'img':
-                const src = element.getAttribute('src') || '';
-                const alt = element.getAttribute('alt') || '';
-                markdown = '![' + alt + '](' + src + ')';
-                break;
-            case 'ul':
-            case 'ol':
-                const listItems = Array.from(element.children);
-                const isOrdered = tagName === 'ol';
-                listItems.forEach((li, index) => {
-                    if (li.tagName.toLowerCase() === 'li') {
-                        const prefix = isOrdered ? (index + 1) + '. ' : '- ';
-                        markdown += prefix + getTextContent(li) + '\n';
-                    }
-                });
-                markdown += '\n';
-                break;
-            case 'li':
-                // Handled by parent ul/ol
-                return '';
-            case 'blockquote':
-                const lines = getTextContent(element).split('\n');
-                markdown = lines.map(line => '> ' + line).join('\n') + '\n\n';
-                break;
-            case 'table':
-                markdown = convertTable(element) + '\n\n';
-                break;
-            case 'div':
-            case 'article':
-            case 'section':
-            case 'main':
-            case 'body':
-                // Process children
-                for (let child of element.childNodes) {
-                    markdown += htmlToMarkdown(child);
-                }
-                break;
-            default:
-                // For other elements, just process children
-                for (let child of element.childNodes) {
-                    markdown += htmlToMarkdown(child);
-                }
-        }
-        
-        return markdown;
-    }
-    
-    function getTextContent(element) {
-        if (element.nodeType === Node.TEXT_NODE) {
-            return element.textContent.trim();
-        }
-        
-        let text = '';
-        for (let child of element.childNodes) {
-            if (child.nodeType === Node.TEXT_NODE) {
-                text += child.textContent;
-            } else if (child.nodeType === Node.ELEMENT_NODE) {
-                const childTag = child.tagName.toLowerCase();
-                if (!['script', 'style', 'noscript'].includes(childTag)) {
-                    text += getTextContent(child);
-                }
-            }
-        }
-        return text.trim();
-    }
-    
-    function convertTable(table) {
-        const rows = Array.from(table.querySelectorAll('tr'));
-        if (rows.length === 0) return '';
-        
-        let markdown = '';
-        let hasHeader = table.querySelector('th') !== null;
-        
-        rows.forEach((row, rowIndex) => {
-            const cells = Array.from(row.querySelectorAll('th, td'));
-            const cellTexts = cells.map(cell => getTextContent(cell));
-            markdown += '| ' + cellTexts.join(' | ') + ' |\n';
+        // Check if Readability is already loaded globally to avoid re-evaluation
+        var ReadabilityConstructor;
+        if (typeof window.__ReadabilityConstructor !== 'undefined') {
+            ReadabilityConstructor = window.__ReadabilityConstructor;
+        } else {
+            // Create a module object and execute the Readability script to get the constructor
+            var __readabilityModule = { exports: {} };
+            (function(module) {
+                eval(READABILITY_SCRIPT);
+            })(__readabilityModule);
+            ReadabilityConstructor = __readabilityModule.exports;
             
-            // Add header separator after first row if it has th elements
-            if (rowIndex === 0 && hasHeader) {
-                markdown += '| ' + cells.map(() => '---').join(' | ') + ' |\n';
-            }
-        });
+            // Cache it for future calls
+            window.__ReadabilityConstructor = ReadabilityConstructor;
+        }
         
-        return markdown;
+        if (!ReadabilityConstructor) {
+            throw new Error('Failed to load Readability constructor');
+        }
+        
+        // Clone the document to avoid DOM flickering (visual artifacts)
+        // This prevents the page from changing appearance during extraction
+        var documentClone = document.cloneNode(true);
+        
+        // Clean up unwanted elements from the clone
+        // These elements don't contribute to the main content and can interfere with extraction
+        var elementsToRemove = [
+            'script',      // JavaScript code
+            'noscript',    // Fallback content
+            'style',       // CSS styles
+            'link',        // External resources
+            'svg',         // Vector graphics
+            'img',         // Images (handled separately by Readability)
+            'video',       // Videos
+            'iframe',      // Embedded frames
+            'canvas',      // Canvas elements
+            '.reflist',    // Reference lists (Wikipedia-style)
+        ];
+        
+        documentClone.querySelectorAll(elementsToRemove.join(','))
+            .forEach(function(el) { el.remove(); });
+        
+        // Use Mozilla Readability algorithm to extract main content
+        // This filters out navigation, ads, sidebars, etc.
+        var reader = new ReadabilityConstructor(documentClone);
+        var article = reader.parse();
+        
+        if (!article) {
+            // Readability failed to extract content, fall back to basic extraction
+            return JSON.stringify({
+                title: document.title || '',
+                content: document.body ? document.body.innerHTML : '',
+                textContent: document.body ? document.body.textContent : '',
+                url: window.location.href,
+                excerpt: '',
+                byline: '',
+                readabilityFailed: true
+            });
+        }
+        
+        // Return structured data as JSON string
+        // The HTML content will be converted to Markdown on the Rust side
+        return JSON.stringify({
+            title: article.title || document.title || '',
+            content: article.content || '',           // Main HTML content
+            textContent: article.textContent || '',   // Plain text version
+            url: window.location.href,
+            excerpt: article.excerpt || '',
+            byline: article.byline || '',
+            siteName: article.siteName || '',
+            length: article.length || 0,
+            lang: article.lang || document.documentElement.lang || '',
+            dir: article.dir || document.documentElement.dir || '',
+            publishedTime: article.publishedTime || '',
+            readabilityFailed: false
+        });
+    } catch (error) {
+        // If anything goes wrong, return error information
+        return JSON.stringify({
+            title: document.title || '',
+            content: '',
+            textContent: '',
+            url: window.location.href,
+            error: error.message,
+            readabilityFailed: true
+        });
     }
-    
-    // Get page title
-    const title = document.title || '';
-    
-    // Get main content - try to find article/main content, fallback to body
-    let contentElement = document.querySelector('article') 
-        || document.querySelector('main') 
-        || document.querySelector('[role="main"]')
-        || document.body;
-    
-    // Convert to markdown
-    let content = htmlToMarkdown(contentElement);
-    
-    // Clean up extra whitespace
-    content = content.replace(/\n{3,}/g, '\n\n').trim();
-    
-    return {
-        title: title,
-        content: content,
-        url: window.location.href
-    };
-})())
+})()
