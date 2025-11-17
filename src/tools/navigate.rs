@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Normalize an incomplete URL by adding missing protocol and handling common patterns
 fn normalize_url(url: &str) -> String {
     let trimmed = url.trim();
-    
+
     // If already has a protocol, return as-is
     if trimmed.starts_with("http://")
         || trimmed.starts_with("https://")
@@ -73,7 +73,7 @@ impl Tool for NavigateTool {
     ) -> Result<ToolResult> {
         // Normalize the URL
         let normalized_url = normalize_url(&params.url);
-        
+
         // Navigate to normalized URL
         context.session.navigate(&normalized_url)?;
 
@@ -142,10 +142,7 @@ mod tests {
             normalize_url("example.com/path"),
             "https://example.com/path"
         );
-        assert_eq!(
-            normalize_url("sub.example.com"),
-            "https://sub.example.com"
-        );
+        assert_eq!(normalize_url("sub.example.com"), "https://sub.example.com");
     }
 
     #[test]
@@ -166,7 +163,10 @@ mod tests {
     #[test]
     fn test_normalize_url_special_protocols() {
         assert_eq!(normalize_url("about:blank"), "about:blank");
-        assert_eq!(normalize_url("file:///path/to/file"), "file:///path/to/file");
+        assert_eq!(
+            normalize_url("file:///path/to/file"),
+            "file:///path/to/file"
+        );
         assert_eq!(
             normalize_url("data:text/html,<h1>Test</h1>"),
             "data:text/html,<h1>Test</h1>"

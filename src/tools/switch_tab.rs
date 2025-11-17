@@ -21,10 +21,14 @@ impl Tool for SwitchTabTool {
         "switch_tab"
     }
 
-    fn execute_typed(&self, params: SwitchTabParams, context: &mut ToolContext) -> Result<ToolResult> {
+    fn execute_typed(
+        &self,
+        params: SwitchTabParams,
+        context: &mut ToolContext,
+    ) -> Result<ToolResult> {
         // Get all tabs to validate index
         let tabs = context.session.get_tabs()?;
-        
+
         if params.index >= tabs.len() {
             return Ok(ToolResult::failure(format!(
                 "Invalid tab index: {}. Valid range: 0-{}",
@@ -36,10 +40,10 @@ impl Tool for SwitchTabTool {
         // Note: We can't directly call session.switch_tab() because we only have &BrowserSession
         // Instead, we'll need to work with the browser directly
         // However, since this requires mutable access to the session, we need to handle this differently
-        
+
         // Get the tab at the specified index
         let target_tab = tabs[params.index].clone();
-        
+
         // Activate the tab
         target_tab.activate().map_err(|e| {
             crate::error::BrowserError::TabOperationFailed(format!(

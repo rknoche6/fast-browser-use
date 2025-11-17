@@ -31,7 +31,11 @@ impl Tool for TabListTool {
         "tab_list"
     }
 
-    fn execute_typed(&self, _params: TabListParams, context: &mut ToolContext) -> Result<ToolResult> {
+    fn execute_typed(
+        &self,
+        _params: TabListParams,
+        context: &mut ToolContext,
+    ) -> Result<ToolResult> {
         // Get all tabs
         let tabs = context.session.get_tabs()?;
         let active_tab = context.session.tab();
@@ -59,14 +63,14 @@ impl Tool for TabListTool {
         // Build summary text
         let active_index = tab_list.iter().position(|t| t.active).unwrap_or(0);
         let active_info = &tab_list[active_index];
-        
+
         let summary = if !tab_list.is_empty() {
             let all_tabs_str = tab_list
                 .iter()
                 .map(|tab| format!("[{}] Title: {} (URL: {})", tab.index, tab.title, tab.url))
                 .collect::<Vec<_>>()
                 .join("\n");
-            
+
             format!(
                 "Current Tab: [{}] {}\nAll Tabs:\n{}",
                 active_index, active_info.title, all_tabs_str

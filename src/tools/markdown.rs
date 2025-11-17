@@ -70,14 +70,14 @@ impl Tool for GetMarkdownTool {
             .evaluate(&js_code, false)
             .map_err(|e| BrowserError::EvaluationFailed(e.to_string()))?;
 
-        // Parse the result  
+        // Parse the result
         let result_value = result.value.ok_or_else(|| {
             // Capture description if available
             let description = result
                 .description
                 .map(|d| format!("Description: {}", d))
                 .unwrap_or_else(|| format!("Type: {:?}", result.Type));
-            
+
             BrowserError::ToolExecutionFailed {
                 tool: "get_markdown".to_string(),
                 reason: format!("No value returned from JavaScript. {}", description),

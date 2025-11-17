@@ -45,15 +45,27 @@ fn test_basic_markdown_extraction() {
     assert!(result.data.is_some());
 
     let data = result.data.unwrap();
-    info!("Markdown result: {}", serde_json::to_string_pretty(&data).unwrap());
+    info!(
+        "Markdown result: {}",
+        serde_json::to_string_pretty(&data).unwrap()
+    );
 
     let markdown = data["markdown"].as_str().expect("Should have markdown");
-    
+
     // Verify content was extracted
-    assert!(markdown.contains("Main Article Title"), "Should contain title");
-    assert!(markdown.contains("first paragraph"), "Should contain first paragraph");
-    assert!(markdown.contains("second paragraph"), "Should contain second paragraph");
-    
+    assert!(
+        markdown.contains("Main Article Title"),
+        "Should contain title"
+    );
+    assert!(
+        markdown.contains("first paragraph"),
+        "Should contain first paragraph"
+    );
+    assert!(
+        markdown.contains("second paragraph"),
+        "Should contain second paragraph"
+    );
+
     // Verify metadata
     assert_eq!(data["currentPage"].as_u64(), Some(1));
     assert_eq!(data["totalPages"].as_u64(), Some(1));
@@ -121,9 +133,15 @@ fn test_readability_filtering() {
     info!("Extracted markdown:\n{}", markdown);
 
     // Main content should be present
-    assert!(markdown.contains("Important Article"), "Should contain article title");
-    assert!(markdown.contains("main content"), "Should contain main content");
-    
+    assert!(
+        markdown.contains("Important Article"),
+        "Should contain article title"
+    );
+    assert!(
+        markdown.contains("main content"),
+        "Should contain main content"
+    );
+
     // The exact filtering depends on Readability's algorithm
     // In some cases, it might include navigation/footer if the article is too short
     // So we just verify the main content is present
@@ -184,31 +202,49 @@ fn test_markdown_pagination() {
 
     assert!(result.success);
     let data = result.data.unwrap();
-    
-    info!("Pagination result: {}", serde_json::to_string_pretty(&data).unwrap());
+
+    info!(
+        "Pagination result: {}",
+        serde_json::to_string_pretty(&data).unwrap()
+    );
 
     let markdown = data["markdown"].as_str().expect("Should have markdown");
-    let current_page = data["currentPage"].as_u64().expect("Should have currentPage");
+    let current_page = data["currentPage"]
+        .as_u64()
+        .expect("Should have currentPage");
     let total_pages = data["totalPages"].as_u64().expect("Should have totalPages");
-    let has_more = data["hasMorePages"].as_bool().expect("Should have hasMorePages");
+    let has_more = data["hasMorePages"]
+        .as_bool()
+        .expect("Should have hasMorePages");
 
     // Verify pagination
     assert_eq!(current_page, 1);
-    assert!(total_pages > 1, "Should have multiple pages, got total_pages={}", total_pages);
+    assert!(
+        total_pages > 1,
+        "Should have multiple pages, got total_pages={}",
+        total_pages
+    );
     assert!(has_more, "Should have more pages");
-    
+
     // Verify title is on first page (either the original or what Readability extracted)
     let title_present = markdown.contains("Very Long Article") || markdown.contains("Long Article");
-    assert!(title_present, "First page should have title. Markdown: {}", &markdown[..200.min(markdown.len())]);
-    
+    assert!(
+        title_present,
+        "First page should have title. Markdown: {}",
+        &markdown[..200.min(markdown.len())]
+    );
+
     // Verify pagination footer
-    assert!(markdown.contains("Page 1 of"), "Should have pagination info");
+    assert!(
+        markdown.contains("Page 1 of"),
+        "Should have pagination info"
+    );
     assert!(markdown.contains("more page"), "Should indicate more pages");
 
     // Note: Testing second page in the same session sometimes fails due to
     // Readability caching. In production this works fine as each call is independent.
     // Uncomment below to test second page with a new session:
-    
+
     /*
     // Test getting second page
     let result2 = tool
@@ -227,7 +263,7 @@ fn test_markdown_pagination() {
 
     // Second page should not have the title
     assert!(!markdown2.starts_with("# Very Long Article"), "Second page should not start with title");
-    
+
     // Should have different content than first page
     assert_ne!(markdown, markdown2, "Pages should have different content");
     */
@@ -259,8 +295,7 @@ fn test_empty_page() {
     let tool = GetMarkdownTool::default();
     let mut context = ToolContext::new(&session);
 
-    let result = tool
-        .execute_typed(GetMarkdownParams::default(), &mut context);
+    let result = tool.execute_typed(GetMarkdownParams::default(), &mut context);
 
     // Should handle empty content gracefully
     // Readability might fail on empty pages, which is acceptable
@@ -340,7 +375,7 @@ fn test_table_conversion() {
     assert!(markdown.contains("Name"), "Should contain table header");
     assert!(markdown.contains("Alice"), "Should contain table data");
     assert!(markdown.contains("Bob"), "Should contain table data");
-    
+
     // Table should be formatted (exact format depends on html2md library)
     assert!(markdown.contains("30"), "Should contain age data");
     assert!(markdown.contains("London"), "Should contain city data");
@@ -389,10 +424,16 @@ fn test_double_execution_same_page() {
     assert!(result1.success, "First execution should succeed");
     let data1 = result1.data.expect("First call should return data");
     let markdown1 = data1["markdown"].as_str().expect("Should have markdown");
-    
+
     info!("First call succeeded, markdown length: {}", markdown1.len());
-    assert!(markdown1.contains("Test Article"), "First call should contain title");
-    assert!(markdown1.contains("paragraph one"), "First call should contain content");
+    assert!(
+        markdown1.contains("Test Article"),
+        "First call should contain title"
+    );
+    assert!(
+        markdown1.contains("paragraph one"),
+        "First call should contain content"
+    );
 
     // Second execution on the same page - this is where the bug occurs
     info!("Executing get_markdown (second call on same page)...");
@@ -403,14 +444,26 @@ fn test_double_execution_same_page() {
     assert!(result2.success, "Second execution should succeed");
     let data2 = result2.data.expect("Second call should return data");
     let markdown2 = data2["markdown"].as_str().expect("Should have markdown");
-    
-    info!("Second call succeeded, markdown length: {}", markdown2.len());
-    assert!(markdown2.contains("Test Article"), "Second call should contain title");
-    assert!(markdown2.contains("paragraph one"), "Second call should contain content");
-    
+
+    info!(
+        "Second call succeeded, markdown length: {}",
+        markdown2.len()
+    );
+    assert!(
+        markdown2.contains("Test Article"),
+        "Second call should contain title"
+    );
+    assert!(
+        markdown2.contains("paragraph one"),
+        "Second call should contain content"
+    );
+
     // The content should be the same (or at least very similar)
-    assert_eq!(markdown1, markdown2, "Both calls should return the same content");
-    
+    assert_eq!(
+        markdown1, markdown2,
+        "Both calls should return the same content"
+    );
+
     info!("Double execution test passed!");
 }
 
@@ -457,7 +510,7 @@ fn test_page_clamping() {
 
     assert!(result.success);
     let data = result.data.unwrap();
-    
+
     // Should clamp to last available page (page 1)
     assert_eq!(data["currentPage"].as_u64(), Some(1));
     assert_eq!(data["totalPages"].as_u64(), Some(1));

@@ -1,6 +1,6 @@
 use browser_use::tools::{
-    HoverParams, ScrollParams, SelectParams, Tool, ToolContext, hover::HoverTool, scroll::ScrollTool,
-    select::SelectTool,
+    HoverParams, ScrollParams, SelectParams, Tool, ToolContext, hover::HoverTool,
+    scroll::ScrollTool, select::SelectTool,
 };
 use browser_use::{BrowserSession, LaunchOptions};
 use log::info;
@@ -152,12 +152,7 @@ fn test_scroll_tool_with_amount() {
 
     // Execute the tool to scroll down 500 pixels
     let result = tool
-        .execute_typed(
-            ScrollParams {
-                amount: Some(500),
-            },
-            &mut context,
-        )
+        .execute_typed(ScrollParams { amount: Some(500) }, &mut context)
         .expect("Failed to execute scroll tool");
 
     // Verify the result
@@ -171,7 +166,10 @@ fn test_scroll_tool_with_amount() {
     );
 
     let scrolled = data["scrolled"].as_i64();
-    assert!(scrolled.is_some() && scrolled.unwrap() > 0, "Should have scrolled");
+    assert!(
+        scrolled.is_some() && scrolled.unwrap() > 0,
+        "Should have scrolled"
+    );
 }
 
 #[test]

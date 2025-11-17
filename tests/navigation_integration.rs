@@ -48,10 +48,7 @@ fn test_go_back_tool() {
         serde_json::to_string_pretty(&data).unwrap()
     );
 
-    assert_eq!(
-        data["message"].as_str(),
-        Some("Navigated back in history")
-    );
+    assert_eq!(data["message"].as_str(), Some("Navigated back in history"));
 
     std::thread::sleep(std::time::Duration::from_millis(500));
 
@@ -269,7 +266,10 @@ fn test_go_back_on_first_page() {
         .execute_typed(GoBackParams {}, &mut context)
         .expect("Failed to execute go_back tool");
 
-    assert!(result.success, "Tool execution should succeed even if no previous page");
+    assert!(
+        result.success,
+        "Tool execution should succeed even if no previous page"
+    );
     info!(
         "Go back on first page result: {}",
         serde_json::to_string_pretty(&result.data.unwrap()).unwrap()
@@ -299,7 +299,10 @@ fn test_go_forward_on_last_page() {
         .execute_typed(GoForwardParams {}, &mut context)
         .expect("Failed to execute go_forward tool");
 
-    assert!(result.success, "Tool execution should succeed even if no forward history");
+    assert!(
+        result.success,
+        "Tool execution should succeed even if no forward history"
+    );
     info!(
         "Go forward on last page result: {}",
         serde_json::to_string_pretty(&result.data.unwrap()).unwrap()

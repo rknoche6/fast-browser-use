@@ -18,12 +18,16 @@ impl Tool for CloseTabTool {
         "close_tab"
     }
 
-    fn execute_typed(&self, _params: CloseTabParams, context: &mut ToolContext) -> Result<ToolResult> {
+    fn execute_typed(
+        &self,
+        _params: CloseTabParams,
+        context: &mut ToolContext,
+    ) -> Result<ToolResult> {
         // Get the current tab info before closing
         let active_tab = context.session.tab();
         let tab_title = active_tab.get_title().unwrap_or_default();
         let tab_url = active_tab.get_url();
-        
+
         // Get the current tab index
         let tabs = context.session.get_tabs()?;
         let current_index = tabs
@@ -33,10 +37,7 @@ impl Tool for CloseTabTool {
 
         // Close the active tab
         active_tab.close(true).map_err(|e| {
-            crate::error::BrowserError::TabOperationFailed(format!(
-                "Failed to close tab: {}",
-                e
-            ))
+            crate::error::BrowserError::TabOperationFailed(format!("Failed to close tab: {}", e))
         })?;
 
         let message = format!(
