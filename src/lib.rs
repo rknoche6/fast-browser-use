@@ -109,3 +109,5 @@ pub use tools::{Tool, ToolContext, ToolRegistry, ToolResult};
 
 #[cfg(feature = "mcp-handler")]
 pub use mcp::BrowserServer;
+#[cfg(feature = "mcp-handler")]
+pub use rmcp::ServiceExt;
