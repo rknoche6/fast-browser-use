@@ -1,14 +1,18 @@
-use crate::dom::ElementNode;
+use crate::dom::{AriaChild, AriaNode, yaml_escape_key_if_needed, yaml_escape_value_if_needed};
 use crate::error::Result;
 use crate::tools::{Tool, ToolContext, ToolResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Parameters for the snapshot tool (no parameters needed)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct SnapshotParams {}
+/// Parameters for the snapshot tool
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+pub struct SnapshotParams {
+    /// Whether to include full snapshot or incremental
+    #[serde(default)]
+    pub incremental: bool,
+}
 
-/// Tool for getting a snapshot of the page with indexed interactive elements
+/// Tool for getting an ARIA snapshot of the page in YAML format
 #[derive(Default)]
 pub struct SnapshotTool;
 
@@ -21,342 +25,341 @@ impl Tool for SnapshotTool {
 
     fn execute_typed(
         &self,
-        _params: SnapshotParams,
+        params: SnapshotParams,
         context: &mut ToolContext,
     ) -> Result<ToolResult> {
         // Get or extract the DOM tree
         let dom = context.get_dom()?;
 
-        // Generate the snapshot by traversing the DOM tree
-        let snapshot = generate_snapshot(&dom.root, 0);
+        // Generate YAML snapshot
+        let yaml_snapshot = render_aria_tree(&dom.root, RenderMode::Ai, None);
 
         // Count interactive elements
         let interactive_count = dom.count_interactive();
 
-        Ok(ToolResult::success_with(serde_json::json!({
-            "snapshot": snapshot,
-            "interactive_count": interactive_count
-        })))
-    }
-}
-
-/// Generate a Markdown-like snapshot of the page by traversing the DOM tree
-fn generate_snapshot(node: &ElementNode, depth: usize) -> String {
-    let mut output = String::new();
-
-    // Skip invisible elements
-    if !node.is_visible && depth > 0 {
-        return output;
-    }
-
-    // Handle different element types
-    match node.tag_name.as_str() {
-        // Heading elements
-        "h1" => {
-            append_with_index(
-                &mut output,
-                node,
-                &format!("# {}", get_text_content(node)),
-                depth,
-            );
-        }
-        "h2" => {
-            append_with_index(
-                &mut output,
-                node,
-                &format!("## {}", get_text_content(node)),
-                depth,
-            );
-        }
-        "h3" => {
-            append_with_index(
-                &mut output,
-                node,
-                &format!("### {}", get_text_content(node)),
-                depth,
-            );
-        }
-        "h4" => {
-            append_with_index(
-                &mut output,
-                node,
-                &format!("#### {}", get_text_content(node)),
-                depth,
-            );
-        }
-        "h5" => {
-            append_with_index(
-                &mut output,
-                node,
-                &format!("##### {}", get_text_content(node)),
-                depth,
-            );
-        }
-        "h6" => {
-            append_with_index(
-                &mut output,
-                node,
-                &format!("###### {}", get_text_content(node)),
-                depth,
-            );
-        }
-        // Button elements
-        "button" => {
-            let text = get_text_content(node);
-            if !text.is_empty() {
-                append_with_index(&mut output, node, &text, depth);
-            } else {
-                append_with_index(&mut output, node, "<button>", depth);
-            }
-        }
-        // Link elements
-        "a" => {
-            let text = get_text_content(node);
-            let href = node.get_attribute("href").map(|s| s.as_str()).unwrap_or("");
-            if !text.is_empty() {
-                if !href.is_empty() {
-                    append_with_index(&mut output, node, &format!("{} ({})", text, href), depth);
-                } else {
-                    append_with_index(&mut output, node, &text, depth);
-                }
-            } else {
-                append_with_index(&mut output, node, &format!("<link {}>", href), depth);
-            }
-        }
-        // Input elements
-        "input" => {
-            let input_type = node
-                .get_attribute("type")
-                .map(|s| s.as_str())
-                .unwrap_or("text");
-            let placeholder = node
-                .get_attribute("placeholder")
-                .map(|s| format!(" placeholder=\"{}\"", s))
-                .unwrap_or_default();
-            append_with_index(
-                &mut output,
-                node,
-                &format!("<input type=\"{}\"{}>,", input_type, placeholder),
-                depth,
-            );
-        }
-        // Textarea elements
-        "textarea" => {
-            let placeholder = node
-                .get_attribute("placeholder")
-                .map(|s| format!(" placeholder=\"{}\"", s))
-                .unwrap_or_default();
-            append_with_index(
-                &mut output,
-                node,
-                &format!("<textarea{}>", placeholder),
-                depth,
-            );
-        }
-        // Select elements
-        "select" => {
-            append_with_index(&mut output, node, "<select>", depth);
-        }
-        // Label elements
-        "label" => {
-            let text = get_text_content(node);
-            if !text.is_empty() {
-                append_with_index(&mut output, node, &text, depth);
-            }
-        }
-        // Paragraph and div elements with text
-        "p" | "div" | "span" | "section" | "article" | "main" | "header" | "footer" | "nav" => {
-            let text = get_direct_text_content(node);
-            if !text.is_empty() {
-                append_with_index(&mut output, node, &text, depth);
-            }
-            // Process children
-            for child in &node.children {
-                let child_output = generate_snapshot(child, depth + 1);
-                if !child_output.is_empty() {
-                    output.push_str(&child_output);
-                }
-            }
-            return output;
-        }
-        // List items
-        "li" => {
-            let text = get_direct_text_content(node);
-            let indent = "  ".repeat(depth.saturating_sub(1));
-            if !text.is_empty() {
-                append_with_index(&mut output, node, &format!("{}• {}", indent, text), depth);
-            } else {
-                append_with_index(&mut output, node, &format!("{}• ", indent), depth);
-            }
-            // Process children
-            for child in &node.children {
-                let child_output = generate_snapshot(child, depth + 1);
-                if !child_output.is_empty() {
-                    output.push_str(&child_output);
-                }
-            }
-            return output;
-        }
-        // Container elements - just process children
-        "body" | "ul" | "ol" | "form" | "fieldset" | "table" | "tbody" | "thead" | "tr" => {
-            for child in &node.children {
-                let child_output = generate_snapshot(child, depth + 1);
-                if !child_output.is_empty() {
-                    output.push_str(&child_output);
-                }
-            }
-            return output;
-        }
-        // Other interactive elements with role attributes
-        _ => {
-            if node.is_interactive {
-                let text = get_text_content(node);
-                if !text.is_empty() {
-                    append_with_index(&mut output, node, &text, depth);
-                } else {
-                    append_with_index(&mut output, node, &format!("<{}>", node.tag_name), depth);
-                }
-            } else {
-                // Non-interactive elements with text
-                let text = get_direct_text_content(node);
-                if !text.is_empty() {
-                    output.push_str(&text);
-                    output.push('\n');
-                }
-                // Process children
-                for child in &node.children {
-                    let child_output = generate_snapshot(child, depth + 1);
-                    if !child_output.is_empty() {
-                        output.push_str(&child_output);
-                    }
-                }
-            }
-            return output;
-        }
-    }
-
-    // Process children for elements that haven't returned yet
-    for child in &node.children {
-        let child_output = generate_snapshot(child, depth + 1);
-        if !child_output.is_empty() {
-            output.push_str(&child_output);
-        }
-    }
-
-    output
-}
-
-/// Append content with index marker if the element is interactive
-fn append_with_index(output: &mut String, node: &ElementNode, content: &str, _depth: usize) {
-    if let Some(index) = node.index {
-        output.push_str(&format!("[{}] {}\n", index, content));
-    } else {
-        output.push_str(content);
-        output.push('\n');
-    }
-}
-
-/// Get the text content of an element (including all descendants)
-fn get_text_content(node: &ElementNode) -> String {
-    if let Some(text) = &node.text_content {
-        let trimmed = text.trim();
-        if trimmed.len() > 200 {
-            format!("{}...", &trimmed[..197])
+        let result = if params.incremental {
+            // TODO: Implement incremental snapshots
+            serde_json::json!({
+                "full": yaml_snapshot,
+                "interactive_count": interactive_count,
+            })
         } else {
-            trimmed.to_string()
-        }
-    } else {
-        String::new()
+            serde_json::json!({
+                "snapshot": yaml_snapshot,
+                "interactive_count": interactive_count,
+            })
+        };
+
+        Ok(ToolResult::success_with(result))
     }
 }
 
-/// Get only the direct text content of an element (not including children)
-fn get_direct_text_content(node: &ElementNode) -> String {
-    if node.children.is_empty() {
-        get_text_content(node)
+/// Rendering mode for ARIA tree
+#[derive(Debug, Clone, Copy)]
+pub enum RenderMode {
+    /// AI consumption mode (includes refs, cursor, active markers)
+    Ai,
+    /// Expect mode (for testing)
+    Expect,
+}
+
+/// Render an ARIA tree to YAML format
+/// Based on Playwright's renderAriaTree function
+pub fn render_aria_tree(root: &AriaNode, mode: RenderMode, previous: Option<&AriaNode>) -> String {
+    let mut lines = Vec::new();
+
+    let render_cursor_pointer = matches!(mode, RenderMode::Ai);
+    let render_active = matches!(mode, RenderMode::Ai);
+
+    // Do not render the root fragment, just its children
+    let nodes_to_render = if root.role == "fragment" {
+        &root.children
     } else {
-        // If has children, only use text_content if it's short (likely direct text)
-        if let Some(text) = &node.text_content {
-            let trimmed = text.trim();
-            if !trimmed.is_empty()
-                && trimmed.len() < 100
-                && !node.children.iter().any(|c| c.is_visible)
-            {
-                return trimmed.to_string();
+        // Single root node case - wrap it
+        return render_single_node(root, mode, previous);
+    };
+
+    for node in nodes_to_render {
+        match node {
+            AriaChild::Text(text) => {
+                visit_text(text, "", &mut lines);
+            }
+            AriaChild::Node(node) => {
+                visit(
+                    node,
+                    "",
+                    render_cursor_pointer,
+                    render_active,
+                    &mut lines,
+                    previous,
+                );
             }
         }
-        String::new()
     }
+
+    lines.join("\n")
+}
+
+fn render_single_node(root: &AriaNode, mode: RenderMode, previous: Option<&AriaNode>) -> String {
+    let mut lines = Vec::new();
+    let render_cursor_pointer = matches!(mode, RenderMode::Ai);
+    let render_active = matches!(mode, RenderMode::Ai);
+
+    visit(
+        root,
+        "",
+        render_cursor_pointer,
+        render_active,
+        &mut lines,
+        previous,
+    );
+
+    lines.join("\n")
+}
+
+fn visit_text(text: &str, indent: &str, lines: &mut Vec<String>) {
+    let escaped = yaml_escape_value_if_needed(text);
+    if !escaped.is_empty() {
+        lines.push(format!("{}- text: {}", indent, escaped));
+    }
+}
+
+fn visit(
+    aria_node: &AriaNode,
+    indent: &str,
+    render_cursor_pointer: bool,
+    render_active: bool,
+    lines: &mut Vec<String>,
+    _previous: Option<&AriaNode>,
+) {
+    // Create the key (role + name + attributes)
+    let key = create_key(aria_node, render_cursor_pointer, render_active);
+    let escaped_key = format!("{}- {}", indent, yaml_escape_key_if_needed(&key));
+
+    // Get single inlined text child if applicable
+    let single_text_child = get_single_inlined_text_child(aria_node);
+
+    if aria_node.children.is_empty() && aria_node.props.is_empty() {
+        // Leaf node without children or props
+        lines.push(escaped_key);
+    } else if let Some(text) = single_text_child {
+        // Leaf node with just text inside
+        lines.push(format!(
+            "{}: {}",
+            escaped_key,
+            yaml_escape_value_if_needed(&text)
+        ));
+    } else {
+        // Node with props and/or children
+        lines.push(format!("{}:", escaped_key));
+
+        // Render props
+        for (name, value) in &aria_node.props {
+            lines.push(format!(
+                "{}  - /{}: {}",
+                indent,
+                name,
+                yaml_escape_value_if_needed(value)
+            ));
+        }
+
+        // Render children
+        let child_indent = format!("{}  ", indent);
+        let in_cursor_pointer =
+            aria_node.index.is_some() && render_cursor_pointer && aria_node.has_pointer_cursor();
+
+        for child in &aria_node.children {
+            match child {
+                AriaChild::Text(text) => {
+                    visit_text(text, &child_indent, lines);
+                }
+                AriaChild::Node(child_node) => {
+                    visit(
+                        child_node,
+                        &child_indent,
+                        render_cursor_pointer && !in_cursor_pointer,
+                        render_active,
+                        lines,
+                        None,
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn create_key(aria_node: &AriaNode, render_cursor_pointer: bool, render_active: bool) -> String {
+    let mut key = aria_node.role.clone();
+
+    // Add name if present and not too long
+    if !aria_node.name.is_empty() && aria_node.name.len() <= 900 {
+        // YAML has a limit of 1024 characters per key
+        let name = &aria_node.name;
+        // Simple stringification (no regex handling for now)
+        key.push(' ');
+        key.push_str(&format!("{:?}", name)); // JSON-style quoting
+    }
+
+    // Add ARIA state attributes
+    if let Some(checked) = &aria_node.checked {
+        match checked {
+            crate::dom::element::AriaChecked::Bool(true) => key.push_str(" [checked]"),
+            crate::dom::element::AriaChecked::Bool(false) => {}
+            crate::dom::element::AriaChecked::Mixed(_) => key.push_str(" [checked=mixed]"),
+        }
+    }
+
+    if aria_node.disabled == Some(true) {
+        key.push_str(" [disabled]");
+    }
+
+    if aria_node.expanded == Some(true) {
+        key.push_str(" [expanded]");
+    }
+
+    if render_active && aria_node.active == Some(true) {
+        key.push_str(" [active]");
+    }
+
+    if let Some(level) = aria_node.level {
+        key.push_str(&format!(" [level={}]", level));
+    }
+
+    if let Some(pressed) = &aria_node.pressed {
+        match pressed {
+            crate::dom::element::AriaPressed::Bool(true) => key.push_str(" [pressed]"),
+            crate::dom::element::AriaPressed::Bool(false) => {}
+            crate::dom::element::AriaPressed::Mixed(_) => key.push_str(" [pressed=mixed]"),
+        }
+    }
+
+    if aria_node.selected == Some(true) {
+        key.push_str(" [selected]");
+    }
+
+    // Add index attribute
+    if let Some(index) = aria_node.index {
+        key.push_str(&format!(" [index={}]", index));
+
+        if render_cursor_pointer && aria_node.has_pointer_cursor() {
+            key.push_str(" [cursor=pointer]");
+        }
+    }
+
+    key
+}
+
+fn get_single_inlined_text_child(aria_node: &AriaNode) -> Option<String> {
+    if aria_node.children.len() == 1 && aria_node.props.is_empty() {
+        if let AriaChild::Text(text) = &aria_node.children[0] {
+            return Some(text.clone());
+        }
+    }
+    None
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dom::DomTree;
-    use crate::dom::ElementNode;
 
     #[test]
-    fn test_empty_dom_tree() {
-        let root = ElementNode::new("body");
-        let dom_tree = DomTree::new(root);
-        assert_eq!(dom_tree.count_interactive(), 0);
+    fn test_render_simple_tree() {
+        let mut root = AriaNode::fragment();
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("button", "Click me")
+                .with_index(0)
+                .with_box(true, Some("pointer".to_string())),
+        )));
+
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        assert!(yaml.contains("button"));
+        assert!(yaml.contains("Click me"));
+        assert!(yaml.contains("[index=0]"));
+        assert!(yaml.contains("[cursor=pointer]"));
     }
 
     #[test]
-    fn test_generate_snapshot_simple() {
-        let mut root = ElementNode::new("body");
-        root.is_visible = true;
+    fn test_render_tree_with_text() {
+        let mut root = AriaNode::fragment();
+        root.children
+            .push(AriaChild::Text("Hello world".to_string()));
 
-        let mut heading = ElementNode::new("h1");
-        heading.text_content = Some("Welcome".to_string());
-        heading.is_visible = true;
-        root.add_child(heading);
-
-        let mut button = ElementNode::new("button");
-        button.text_content = Some("Click me".to_string());
-        button.is_visible = true;
-        button.is_interactive = true;
-        button.index = Some(0);
-        root.add_child(button);
-
-        let snapshot = generate_snapshot(&root, 0);
-        assert!(snapshot.contains("# Welcome"));
-        assert!(snapshot.contains("[0] Click me"));
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        eprintln!("YAML output:\n{}", yaml);
+        assert!(yaml.contains("text:"));
+        assert!(yaml.contains("Hello world"));
     }
 
     #[test]
-    fn test_generate_snapshot_with_links() {
-        let mut root = ElementNode::new("body");
-        root.is_visible = true;
+    fn test_render_nested_tree() {
+        let mut root = AriaNode::fragment();
+        let mut div = AriaNode::new("generic", "");
+        div.children
+            .push(AriaChild::Text("Parent text".to_string()));
+        div.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("button", "Child button").with_index(0),
+        )));
 
-        let mut link = ElementNode::new("a");
-        link.add_attribute("href", "https://example.com");
-        link.text_content = Some("Example Link".to_string());
-        link.is_visible = true;
-        link.is_interactive = true;
-        link.index = Some(5);
-        root.add_child(link);
+        root.children.push(AriaChild::Node(Box::new(div)));
 
-        let snapshot = generate_snapshot(&root, 0);
-        assert!(snapshot.contains("[5] Example Link (https://example.com)"));
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        assert!(yaml.contains("generic"));
+        assert!(yaml.contains("Parent text"));
+        assert!(yaml.contains("button"));
+        assert!(yaml.contains("Child button"));
     }
 
     #[test]
-    fn test_generate_snapshot_with_input() {
-        let mut root = ElementNode::new("body");
-        root.is_visible = true;
+    fn test_render_with_props() {
+        let mut root = AriaNode::fragment();
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("link", "Go to page")
+                .with_index(0)
+                .with_prop("url", "https://example.com"),
+        )));
 
-        let mut input = ElementNode::new("input");
-        input.add_attribute("type", "text");
-        input.add_attribute("placeholder", "Enter your name");
-        input.is_visible = true;
-        input.is_interactive = true;
-        input.index = Some(10);
-        root.add_child(input);
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        eprintln!("YAML output:\n{}", yaml);
+        assert!(yaml.contains("link"));
+        assert!(yaml.contains("[index=0]"));
+        assert!(yaml.contains("/url:"));
+        assert!(yaml.contains("https://example.com"));
+    }
 
-        let snapshot = generate_snapshot(&root, 0);
-        assert!(snapshot.contains("[10]"));
-        assert!(snapshot.contains("input"));
-        assert!(snapshot.contains("placeholder=\"Enter your name\""));
+    #[test]
+    fn test_render_with_aria_states() {
+        let mut root = AriaNode::fragment();
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("checkbox", "Accept terms")
+                .with_index(0)
+                .with_checked(true)
+                .with_disabled(false),
+        )));
+
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        assert!(yaml.contains("checkbox"));
+        assert!(yaml.contains("[checked]"));
+        // disabled=false should not appear
+        assert!(!yaml.contains("[disabled]"));
+    }
+
+    #[test]
+    fn test_render_heading_with_level() {
+        let mut root = AriaNode::fragment();
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("heading", "Page Title").with_level(1),
+        )));
+
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        assert!(yaml.contains("heading"));
+        assert!(yaml.contains("Page Title"));
+        assert!(yaml.contains("[level=1]"));
+    }
+
+    #[test]
+    fn test_empty_snapshot() {
+        let root = AriaNode::fragment();
+        let yaml = render_aria_tree(&root, RenderMode::Ai, None);
+        assert_eq!(yaml.trim(), "");
     }
 }

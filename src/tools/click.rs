@@ -60,13 +60,13 @@ impl Tool for ClickTool {
                 "method": "css"
             })))
         } else if let Some(index) = params.index {
-            // Index path
+            // Index path - convert index to CSS selector
             let css_selector = {
                 let dom = context.get_dom()?;
-                let selector_info = dom.get_selector(index).ok_or_else(|| {
+                let selector = dom.get_selector(index).ok_or_else(|| {
                     BrowserError::ElementNotFound(format!("No element with index {}", index))
                 })?;
-                selector_info.css_selector.clone()
+                selector.clone()
             };
 
             let element = context.session.find_element(&css_selector)?;

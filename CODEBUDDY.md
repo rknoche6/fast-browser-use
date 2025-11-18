@@ -51,15 +51,14 @@ The codebase is organized into five main modules:
 **2. `dom/` - DOM Extraction & Indexing**
 - `tree.rs`: `DomTree` represents page structure with indexed interactive elements
 - `element.rs`: `ElementNode` is a serializable DOM node with visibility/interactivity metadata
-- `selector_map.rs`: Maps numeric indices to CSS selectors for element targeting
 - `extract_dom.js`: JavaScript injected into pages to extract DOM as JSON
-- Flow: JS extraction → JSON → `ElementNode` tree → index interactive elements → `SelectorMap`
+- Flow: JS extraction → JSON → `ElementNode` tree → index interactive elements → `DomTree.selectors`
 
 **3. `tools/` - Browser Automation Tools**
 - Each tool is in its own file: `navigate.rs`, `click.rs`, `input.rs`, `extract.rs`, `screenshot.rs`, `evaluate.rs`, `wait.rs`
 - All tools implement the `Tool` trait with type-safe parameter structs (e.g., `ClickParams`, `NavigateParams`)
 - `ToolRegistry` manages tools and executes them with `ToolContext` (contains `BrowserSession` + optional cached `DomTree`)
-- Element selection: tools accept either CSS selectors OR numeric indices (from `SelectorMap`)
+- Element selection: tools accept either CSS selectors OR numeric indices (from `DomTree`)
 - **⚠️ IMPORTANT: When adding a new tool, remember to register it in `src/mcp/mod.rs` using the `register_mcp_tools!` macro**
 
 **4. `mcp/` - Model Context Protocol Server**
@@ -109,7 +108,7 @@ trait Tool {
 - DOM extraction executes JavaScript in the browser and parses the returned JSON
 - All tools work on the active tab; use `switch_tab()` to change context
 - Element indices are only valid for the specific DOM extraction they came from
-- Re-extracting the DOM rebuilds the `SelectorMap` and reassigns all indices
+- Re-extracting the DOM rebuilds the selector list on `DomTree` and reassigns all indices
 - **When writing JavaScript to be executed in the browser, always use `JSON.stringify()` to ensure the result is returned properly** - this prevents issues with complex objects and ensures consistent serialization
 
 ## Crate Dependencies

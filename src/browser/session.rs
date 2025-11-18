@@ -175,11 +175,9 @@ impl BrowserSession {
         DomTree::from_tab(&self.active_tab)
     }
 
-    /// Extract and simplify the DOM tree from the active tab
-    pub fn extract_simplified_dom(&self) -> Result<DomTree> {
-        let mut tree = self.extract_dom()?;
-        tree.simplify();
-        Ok(tree)
+    /// Extract the DOM tree with a custom ref prefix (for iframe handling)
+    pub fn extract_dom_with_prefix(&self, prefix: &str) -> Result<DomTree> {
+        DomTree::from_tab_with_prefix(&self.active_tab, prefix)
     }
 
     /// Get element selector by index from the last extracted DOM

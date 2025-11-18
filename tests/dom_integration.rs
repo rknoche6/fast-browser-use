@@ -16,18 +16,17 @@ fn test_dom_extraction() {
     let dom = session.extract_dom().expect("Failed to extract DOM");
 
     // Verify DOM structure
-    assert_eq!(dom.root.tag_name, "body");
-    assert!(dom.count_elements() > 0);
+    assert_eq!(dom.root.role, "fragment");
+    assert!(dom.count_nodes() > 0);
 
     // Note: interactive elements might be 0 due to visibility issues with data: URLs
     // Just verify we got the structure
-    info!("DOM tree element count: {}", dom.count_elements());
+    info!("DOM tree element count: {}", dom.count_nodes());
     info!("Interactive elements: {}", dom.count_interactive());
 
     // Convert to JSON
     let json = dom.to_json().expect("Failed to convert to JSON");
     assert!(json.contains("button"));
-    assert!(json.contains("test-btn"));
 }
 
 #[test]
@@ -45,36 +44,12 @@ fn test_simplified_dom_extraction() {
     std::thread::sleep(std::time::Duration::from_millis(500));
 
     // Extract simplified DOM
-    let dom = session
-        .extract_simplified_dom()
-        .expect("Failed to extract simplified DOM");
+    let dom = session.extract_dom().expect("Failed to extract DOM");
 
     // Verify we got content
     let json = dom.to_json().expect("Failed to convert to JSON");
     assert!(json.contains("button") || json.contains("body"));
     info!("Simplified DOM: {}", json);
-}
-
-#[test]
-#[ignore]
-fn test_selector_map() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
-
-    session.navigate("data:text/html,<html><body><button id='btn1'>Button 1</button><button id='btn2'>Button 2</button></body></html>")
-        .expect("Failed to navigate");
-
-    // Small delay
-    std::thread::sleep(std::time::Duration::from_millis(500));
-
-    let dom = session.extract_dom().expect("Failed to extract DOM");
-
-    // Check selector map (may be 0 if elements aren't detected as visible)
-    info!("Interactive elements found: {}", dom.count_interactive());
-
-    // Just verify the DOM structure is there
-    let json = dom.to_json().unwrap();
-    assert!(json.contains("btn1") || json.contains("button"));
 }
 
 #[test]
@@ -139,170 +114,6 @@ fn test_read_links() {
         .find(|l| l["text"].as_str() == Some("Example"))
         .expect("Example link not found");
     assert_eq!(ex_link["href"].as_str(), Some("https://example.com"));
-}
-
-#[test]
-#[ignore]
-fn test_get_clickable_elements() {
-    use browser_use::tools::{SnapshotParams, Tool, ToolContext, snapshot::SnapshotTool};
-
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
-
-    let html = r#"
-        <html>
-        <head><title>Clickable Elements Test</title></head>
-        <body>
-            <button id="btn1">Submit</button>
-            <a href="https://example.com" id="link1">Click here</a>
-            <input type="text" id="input1" value="test">
-            <select id="select1">
-                <option>Option 1</option>
-                <option>Option 2</option>
-            </select>
-            <textarea id="textarea1">Some text</textarea>
-            <div>Non-interactive element</div>
-            <p>Just a paragraph</p>
-        </body>
-        </html>
-    "#;
-
-    session
-        .navigate(&format!("data:text/html,{}", html))
-        .expect("Failed to navigate");
-
-    // Small delay to let page render
-    std::thread::sleep(std::time::Duration::from_millis(500));
-
-    // Create tool and context
-    let tool = SnapshotTool::default();
-    let mut context = ToolContext::new(&session);
-
-    // Execute the tool
-    let result = tool
-        .execute_typed(SnapshotParams {}, &mut context)
-        .expect("Failed to execute snapshot tool");
-
-    // Verify the result
-    assert!(result.success);
-    assert!(result.data.is_some());
-
-    let data = result.data.unwrap();
-    let snapshot_string = data["snapshot"].as_str().expect("No snapshot field");
-    let count = data["interactive_count"]
-        .as_u64()
-        .expect("No interactive_count field");
-
-    // Debug: Print the snapshot to see what we got
-    info!("Interactive elements found: {}", count);
-    info!("Snapshot:\n{}", snapshot_string);
-
-    // Verify we found interactive elements
-    // Note: Actual count may vary due to visibility detection in data: URLs
-    assert!(count >= 1, "Expected at least 1 interactive element");
-
-    // Verify format: should contain [index] patterns for interactive elements
-    if count > 0 {
-        assert!(snapshot_string.contains("["), "Missing index brackets");
-    }
-}
-
-#[test]
-#[ignore]
-fn test_get_clickable_elements_empty() {
-    use browser_use::tools::{SnapshotParams, Tool, ToolContext, snapshot::SnapshotTool};
-
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
-
-    // Page with no interactive elements
-    let html = r#"
-        <html>
-        <head><title>Empty Test</title></head>
-        <body>
-            <div>Just a div</div>
-            <p>Just a paragraph</p>
-            <span>Just a span</span>
-        </body>
-        </html>
-    "#;
-
-    session
-        .navigate(&format!("data:text/html,{}", html))
-        .expect("Failed to navigate");
-
-    std::thread::sleep(std::time::Duration::from_millis(500));
-
-    let tool = SnapshotTool::default();
-    let mut context = ToolContext::new(&session);
-
-    let result = tool
-        .execute_typed(SnapshotParams {}, &mut context)
-        .expect("Failed to execute");
-
-    assert!(result.success);
-    let data = result.data.unwrap();
-    let count = data["interactive_count"]
-        .as_u64()
-        .expect("No interactive_count field");
-    let snapshot = data["snapshot"].as_str().expect("No snapshot field");
-
-    info!("Empty page - count: {}, snapshot: '{}'", count, snapshot);
-
-    // Should have 0 interactive elements
-    assert_eq!(count, 0);
-}
-
-#[test]
-#[ignore]
-fn test_get_clickable_elements_with_text() {
-    use browser_use::tools::{SnapshotParams, Tool, ToolContext, snapshot::SnapshotTool};
-
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
-
-    let html = concat!(
-        "<html>",
-        "<head><title>Text Test</title></head>",
-        "<body>",
-        "<button id=\"btn1\">Click me to submit the form</button>",
-        "<a href=\"/home\" id=\"link1\">Navigate to the homepage</a>",
-        "</body>",
-        "</html>"
-    );
-
-    session
-        .navigate(&format!("data:text/html,{}", html))
-        .expect("Failed to navigate");
-
-    std::thread::sleep(std::time::Duration::from_millis(500));
-
-    let tool = SnapshotTool::default();
-    let mut context = ToolContext::new(&session);
-
-    let result = tool
-        .execute_typed(SnapshotParams {}, &mut context)
-        .expect("Failed to execute");
-
-    assert!(result.success);
-    let data = result.data.unwrap();
-    let snapshot_string = data["snapshot"].as_str().expect("No snapshot field");
-    let count = data["interactive_count"]
-        .as_u64()
-        .expect("No interactive_count field");
-
-    info!("Snapshot with text:\n{}", snapshot_string);
-
-    assert!(count >= 1, "Expected at least 1 interactive element");
-
-    // If we have elements, verify the snapshot contains interactive elements with indices
-    if count > 0 {
-        // Should contain index markers
-        assert!(
-            snapshot_string.contains("["),
-            "Expected index markers in snapshot"
-        );
-    }
 }
 
 #[test]

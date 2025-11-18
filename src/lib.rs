@@ -103,7 +103,7 @@ pub mod tools;
 pub mod mcp;
 
 pub use browser::{BrowserSession, ConnectionOptions, LaunchOptions};
-pub use dom::{BoundingBox, DomTree, ElementNode, ElementSelector, SelectorMap};
+pub use dom::{BoundingBox, DomTree, ElementNode};
 pub use error::{BrowserError, Result};
 pub use tools::{Tool, ToolContext, ToolRegistry, ToolResult};
 

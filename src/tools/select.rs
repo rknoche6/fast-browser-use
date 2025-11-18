@@ -54,10 +54,10 @@ impl Tool for SelectTool {
             selector
         } else if let Some(index) = params.index {
             let dom = context.get_dom()?;
-            let selector_info = dom.get_selector(index).ok_or_else(|| {
+            let selector = dom.get_selector(index).ok_or_else(|| {
                 BrowserError::ElementNotFound(format!("No element with index {}", index))
             })?;
-            selector_info.css_selector.clone()
+            selector.clone()
         } else {
             unreachable!("Validation above ensures one field is Some")
         };

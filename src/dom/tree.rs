@@ -1,32 +1,52 @@
-use crate::dom::element::ElementNode;
-use crate::dom::selector_map::{ElementSelector, SelectorMap};
+use crate::dom::element::{AriaChild, AriaNode};
 use crate::error::{BrowserError, Result};
 use headless_chrome::Tab;
 use std::sync::Arc;
 
-/// Represents the DOM tree of a web page
+/// Represents the ARIA snapshot of a web page
+/// Based on Playwright's AriaSnapshot structure
 #[derive(Debug, Clone)]
 pub struct DomTree {
-    /// Root element of the DOM tree
-    pub root: ElementNode,
+    /// Root AriaNode (usually a fragment)
+    pub root: AriaNode,
 
-    /// Map of indices to element selectors
-    pub selector_map: SelectorMap,
+    /// Array of CSS selectors indexed by element index
+    pub selectors: Vec<String>,
+
+    /// List of iframe indices (for multi-frame snapshots)
+    pub iframe_indices: Vec<usize>,
+}
+
+/// Snapshot extraction response from JavaScript
+#[derive(Debug, serde::Deserialize)]
+struct SnapshotResponse {
+    root: AriaNode,
+    selectors: Vec<String>,
+    #[serde(rename = "iframeIndices")]
+    iframe_indices: Vec<usize>,
 }
 
 impl DomTree {
-    /// Create a new empty DomTree
-    pub fn new(root: ElementNode) -> Self {
-        Self {
+    /// Create a new DomTree from an AriaNode
+    pub fn new(root: AriaNode) -> Self {
+        let mut tree = Self {
             root,
-            selector_map: SelectorMap::new(),
-        }
+            selectors: Vec::new(),
+            iframe_indices: Vec::new(),
+        };
+        tree.rebuild_maps();
+        tree
     }
 
     /// Build DOM tree from a browser tab
     pub fn from_tab(tab: &Arc<Tab>) -> Result<Self> {
-        // JavaScript code to extract simplified DOM structure
-        // This returns a JSON string
+        Self::from_tab_with_prefix(tab, "")
+    }
+
+    /// Build DOM tree from a browser tab with a ref prefix (for iframe handling)
+    pub fn from_tab_with_prefix(tab: &Arc<Tab>, _ref_prefix: &str) -> Result<Self> {
+        // Note: ref_prefix is deprecated but kept for API compatibility
+        // JavaScript code to extract ARIA snapshot
         let js_code = include_str!("extract_dom.js");
 
         // Execute JavaScript to extract DOM
@@ -44,91 +64,117 @@ impl DomTree {
             BrowserError::DomParseFailed(format!("Failed to get JSON string: {}", e))
         })?;
 
-        // Then parse the JSON string into ElementNode
-        let root: ElementNode = serde_json::from_str(&json_str).map_err(|e| {
-            BrowserError::DomParseFailed(format!("Failed to parse DOM JSON: {}", e))
+        // Then parse the JSON string into SnapshotResponse
+        let response: SnapshotResponse = serde_json::from_str(&json_str).map_err(|e| {
+            BrowserError::DomParseFailed(format!("Failed to parse snapshot JSON: {}", e))
         })?;
 
-        let mut tree = Self::new(root);
-        tree.build_selector_map();
-
-        Ok(tree)
+        Ok(Self {
+            root: response.root,
+            selectors: response.selectors,
+            iframe_indices: response.iframe_indices,
+        })
     }
 
-    /// Build the selector map by traversing the DOM tree
-    fn build_selector_map(&mut self) {
-        self.selector_map.clear();
-        let mut index_counter = 0;
-        Self::traverse_and_index_static(
-            &mut self.root,
-            "body",
-            &mut self.selector_map,
-            &mut index_counter,
-        );
+    /// Rebuild the selectors array by traversing the tree
+    /// Note: This only resizes the array based on indices found.
+    /// Actual selectors are populated from JavaScript extraction.
+    fn rebuild_maps(&mut self) {
+        self.iframe_indices.clear();
+
+        // Find the maximum index in the tree
+        let max_index = self.find_max_index(&self.root.clone());
+
+        // Resize selectors array if needed
+        if let Some(max_idx) = max_index {
+            if self.selectors.len() <= max_idx {
+                self.selectors.resize(max_idx + 1, String::new());
+            }
+        }
+
+        // Collect iframe indices
+        let root = self.root.clone();
+        self.collect_iframe_indices(&root);
     }
 
-    /// Static method to recursively traverse and index elements
-    fn traverse_and_index_static(
-        node: &mut ElementNode,
-        css_path: &str,
-        selector_map: &mut SelectorMap,
-        _index_counter: &mut usize,
-    ) {
-        // Compute interactivity for this node
-        node.compute_interactivity();
+    fn find_max_index(&self, node: &AriaNode) -> Option<usize> {
+        let mut max = node.index;
 
-        // If the element is interactive, assign it an index
-        if node.is_interactive && node.is_visible {
-            let selector = Self::build_selector_static(node, css_path);
-            let index = selector_map.register(selector);
-            node.index = Some(index);
+        for child in &node.children {
+            if let AriaChild::Node(child_node) = child {
+                if let Some(child_max) = self.find_max_index(child_node) {
+                    max = match max {
+                        Some(current) => Some(current.max(child_max)),
+                        None => Some(child_max),
+                    };
+                }
+            }
         }
 
-        // Recursively process children
-        for (i, child) in node.children.iter_mut().enumerate() {
-            let child_path = format!("{} > {}:nth-child({})", css_path, child.tag_name, i + 1);
-            Self::traverse_and_index_static(child, &child_path, selector_map, _index_counter);
+        max
+    }
+
+    fn collect_iframe_indices(&mut self, node: &AriaNode) {
+        if let Some(index) = node.index {
+            if node.role == "iframe" {
+                self.iframe_indices.push(index);
+            }
+        }
+
+        for child in &node.children {
+            if let AriaChild::Node(child_node) = child {
+                self.collect_iframe_indices(child_node);
+            }
         }
     }
 
-    /// Build an ElementSelector for a given node (static version)
-    fn build_selector_static(node: &ElementNode, css_path: &str) -> ElementSelector {
-        // Prefer ID selector if available
-        let css_selector = if let Some(id) = &node.id() {
-            format!("#{}", id)
-        } else if let Some(class) = node.get_attribute("class") {
-            format!(
-                "{}.{}",
-                node.tag_name,
-                class.split_whitespace().next().unwrap_or("")
-            )
-        } else {
-            css_path.to_string()
-        };
-
-        let mut selector = ElementSelector::new(css_selector, &node.tag_name);
-
-        if let Some(id) = node.id() {
-            selector = selector.with_id(id);
-        }
-
-        if let Some(text) = &node.text_content {
-            // Truncate text for display
-            let truncated = if text.len() > 50 {
-                format!("{}...", &text[..47])
-            } else {
-                text.clone()
-            };
-            selector = selector.with_text(truncated);
-        }
-
-        selector
+    /// Get CSS selector for a given index
+    pub fn get_selector(&self, index: usize) -> Option<&String> {
+        self.selectors.get(index).filter(|s| !s.is_empty())
     }
 
-    /// Simplify the DOM tree by removing unnecessary elements
-    pub fn simplify(&mut self) {
-        self.root.simplify();
-        self.build_selector_map(); // Rebuild map after simplification
+    /// Get all interactive element indices
+    pub fn interactive_indices(&self) -> Vec<usize> {
+        let mut indices = Vec::new();
+        self.collect_indices(&self.root, &mut indices);
+        indices.sort();
+        indices
+    }
+
+    fn collect_indices(&self, node: &AriaNode, indices: &mut Vec<usize>) {
+        if let Some(index) = node.index {
+            indices.push(index);
+        }
+        for child in &node.children {
+            if let AriaChild::Node(child_node) = child {
+                self.collect_indices(child_node, indices);
+            }
+        }
+    }
+
+    /// Count total nodes in the tree
+    pub fn count_nodes(&self) -> usize {
+        self.root.count_nodes()
+    }
+
+    /// Count interactive elements (elements with indices)
+    pub fn count_interactive(&self) -> usize {
+        self.root.count_interactive()
+    }
+
+    /// Find node by index
+    pub fn find_node_by_index(&self, index: usize) -> Option<&AriaNode> {
+        self.root.find_by_index(index)
+    }
+
+    /// Find node by index (mutable)
+    pub fn find_node_by_index_mut(&mut self, index: usize) -> Option<&mut AriaNode> {
+        self.root.find_by_index_mut(index)
+    }
+
+    /// Get all iframe indices for multi-frame snapshot handling
+    pub fn get_iframe_indices(&self) -> &[usize] {
+        &self.iframe_indices
     }
 
     /// Convert the DOM tree to JSON
@@ -138,55 +184,43 @@ impl DomTree {
         })
     }
 
-    /// Get element selector by index
-    pub fn get_selector(&self, index: usize) -> Option<&ElementSelector> {
-        self.selector_map.get(index)
-    }
+    /// Replace an iframe node's children with content from another snapshot
+    /// Used for multi-frame snapshot assembly
+    pub fn inject_iframe_content(&mut self, iframe_index: usize, iframe_snapshot: DomTree) {
+        if let Some(iframe_node) = self.find_node_by_index_mut(iframe_index) {
+            // Replace iframe's children with the snapshot's root children
+            iframe_node.children = iframe_snapshot.root.children;
 
-    /// Get all interactive element indices
-    pub fn interactive_indices(&self) -> Vec<usize> {
-        self.selector_map.indices().copied().collect()
-    }
+            // Merge selectors (offset by current length)
+            let offset = self.selectors.len();
+            for selector in iframe_snapshot.selectors {
+                if !selector.is_empty() {
+                    self.selectors.push(selector);
+                }
+            }
 
-    /// Count total elements in the tree
-    pub fn count_elements(&self) -> usize {
-        self.count_elements_recursive(&self.root)
-    }
-
-    fn count_elements_recursive(&self, node: &ElementNode) -> usize {
-        1 + node
-            .children
-            .iter()
-            .map(|c| self.count_elements_recursive(c))
-            .sum::<usize>()
-    }
-
-    /// Count interactive elements
-    pub fn count_interactive(&self) -> usize {
-        self.selector_map.len()
-    }
-
-    /// Find element node by index (traverse the tree)
-    pub fn find_node_by_index(&self, index: usize) -> Option<&ElementNode> {
-        self.find_node_by_index_recursive(&self.root, index)
-    }
-
-    fn find_node_by_index_recursive<'a>(
-        &self,
-        node: &'a ElementNode,
-        target_index: usize,
-    ) -> Option<&'a ElementNode> {
-        if node.index == Some(target_index) {
-            return Some(node);
+            // Update iframe indices with offset
+            for idx in iframe_snapshot.iframe_indices {
+                self.iframe_indices.push(idx + offset);
+            }
         }
+    }
 
-        for child in &node.children {
-            if let Some(found) = self.find_node_by_index_recursive(child, target_index) {
-                return Some(found);
+    /// Create a snapshot with multiple frames assembled
+    /// Takes a function that can retrieve snapshots for iframe elements
+    pub fn assemble_with_iframes<F>(mut self, mut get_iframe_snapshot: F) -> Self
+    where
+        F: FnMut(usize) -> Option<DomTree>,
+    {
+        let iframe_indices = self.iframe_indices.clone();
+
+        for iframe_index in iframe_indices {
+            if let Some(iframe_snapshot) = get_iframe_snapshot(iframe_index) {
+                self.inject_iframe_content(iframe_index, iframe_snapshot);
             }
         }
 
-        None
+        self
     }
 }
 
@@ -194,118 +228,89 @@ impl DomTree {
 mod tests {
     use super::*;
 
-    fn create_test_tree() -> ElementNode {
-        let mut root = ElementNode::new("body");
+    fn create_test_tree() -> AriaNode {
+        let mut root = AriaNode::fragment();
 
-        let mut header = ElementNode::new("header");
-        let mut nav_button = ElementNode::new("button");
-        nav_button.add_attribute("id", "nav-btn");
-        nav_button.text_content = Some("Menu".to_string());
-        nav_button.is_visible = true;
-        header.add_child(nav_button);
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("button", "Click me")
+                .with_index(0)
+                .with_box(true, Some("pointer".to_string())),
+        )));
 
-        let mut main = ElementNode::new("main");
-        let mut link = ElementNode::new("a");
-        link.add_attribute("href", "/page");
-        link.text_content = Some("Click here".to_string());
-        link.is_visible = true;
-        main.add_child(link);
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("link", "Go to page")
+                .with_index(1)
+                .with_box(true, None),
+        )));
 
-        let mut div = ElementNode::new("div");
-        div.add_attribute("class", "content");
-        div.text_content = Some("Some text".to_string());
-        main.add_child(div);
-
-        root.add_child(header);
-        root.add_child(main);
+        root.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("paragraph", "").with_child(AriaChild::Text("Some text".to_string())),
+        )));
 
         root
     }
 
     #[test]
-    fn test_dom_tree_creation() {
-        let root = create_test_tree();
-        let tree = DomTree::new(root);
-
-        assert_eq!(tree.root.tag_name, "body");
-        assert_eq!(tree.root.children.len(), 2);
-    }
-
-    #[test]
-    fn test_build_selector_map() {
-        let root = create_test_tree();
-        let mut tree = DomTree::new(root);
-        tree.build_selector_map();
-
-        // Should have 2 interactive elements: button and link
-        assert_eq!(tree.count_interactive(), 2);
-    }
-
-    #[test]
     fn test_find_node_by_index() {
         let root = create_test_tree();
-        let mut tree = DomTree::new(root);
-        tree.build_selector_map();
+        let tree = DomTree::new(root);
 
-        let indices = tree.interactive_indices();
-        assert!(!indices.is_empty());
+        let button = tree.find_node_by_index(0);
+        assert!(button.is_some());
+        assert_eq!(button.unwrap().role, "button");
+        assert_eq!(button.unwrap().name, "Click me");
 
-        for &index in &indices {
-            let node = tree.find_node_by_index(index);
-            assert!(node.is_some());
-            assert_eq!(node.unwrap().index, Some(index));
-        }
+        let not_found = tree.find_node_by_index(999);
+        assert!(not_found.is_none());
     }
 
     #[test]
-    fn test_count_elements() {
+    fn test_count_nodes() {
         let root = create_test_tree();
         let tree = DomTree::new(root);
 
-        // body > header > button, body > main > link, div
-        // Total: body(1) + header(1) + button(1) + main(1) + link(1) + div(1) = 6
-        assert_eq!(tree.count_elements(), 6);
+        // fragment + button + link + paragraph = 4
+        assert_eq!(tree.count_nodes(), 4);
     }
 
     #[test]
-    fn test_simplify() {
-        let mut root = ElementNode::new("body");
-        root.add_child(ElementNode::new("p").with_text("Content"));
-        root.add_child(ElementNode::new("script").with_text("alert('test')"));
-        root.add_child(ElementNode::new("style").with_text(".test {}"));
-
-        let mut tree = DomTree::new(root);
-        tree.simplify();
-
-        assert_eq!(tree.root.children.len(), 1);
-        assert!(tree.root.children[0].is_tag("p"));
-    }
-
-    #[test]
-    fn test_to_json() {
-        let mut root = ElementNode::new("div");
-        root.add_attribute("id", "container");
-        root.add_child(ElementNode::new("span").with_text("Hello"));
-
-        let tree = DomTree::new(root);
-        let json = tree.to_json().unwrap();
-
-        assert!(json.contains("\"tag_name\": \"div\""));
-        assert!(json.contains("\"id\": \"container\""));
-        assert!(json.contains("\"span\""));
-        assert!(json.contains("Hello"));
-    }
-
-    #[test]
-    fn test_get_selector() {
+    fn test_interactive_indices() {
         let root = create_test_tree();
-        let mut tree = DomTree::new(root);
-        tree.build_selector_map();
+        let tree = DomTree::new(root);
 
         let indices = tree.interactive_indices();
-        for &index in &indices {
-            let selector = tree.get_selector(index);
-            assert!(selector.is_some());
+        assert_eq!(indices.len(), 2);
+        assert!(indices.contains(&0));
+        assert!(indices.contains(&1));
+    }
+
+    #[test]
+    fn test_inject_iframe_content() {
+        let mut main_tree = AriaNode::fragment();
+        main_tree.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("iframe", "").with_index(0),
+        )));
+
+        let mut iframe_tree = AriaNode::fragment();
+        iframe_tree.children.push(AriaChild::Node(Box::new(
+            AriaNode::new("button", "Inside iframe").with_index(0),
+        )));
+
+        let mut main = DomTree::new(main_tree);
+        let iframe = DomTree::new(iframe_tree);
+
+        main.inject_iframe_content(0, iframe);
+
+        // Check that iframe now has the button as a child
+        let iframe_node = main.find_node_by_index(0).unwrap();
+        assert_eq!(iframe_node.children.len(), 1);
+
+        match &iframe_node.children[0] {
+            AriaChild::Node(n) => {
+                assert_eq!(n.role, "button");
+                assert_eq!(n.name, "Inside iframe");
+            }
+            _ => panic!("Expected node child"),
         }
     }
 }
