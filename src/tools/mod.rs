@@ -25,6 +25,7 @@ pub mod select;
 pub mod snapshot;
 pub mod switch_tab;
 pub mod tab_list;
+mod utils;
 pub mod wait;
 
 // Re-export Params types for use by MCP layer
