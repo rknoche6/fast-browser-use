@@ -3,6 +3,7 @@ use crate::dom::DomTree;
 use crate::error::{BrowserError, Result};
 use crate::tools::{ToolContext, ToolRegistry};
 use headless_chrome::{Browser, Tab};
+use std::ffi::OsStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -25,6 +26,14 @@ impl BrowserSession {
     /// Launch a new browser instance with the given options
     pub fn launch(options: LaunchOptions) -> Result<Self> {
         let mut launch_opts = headless_chrome::LaunchOptions::default();
+
+        // Ignore default arguments to prevent detection by anti-bot services
+        launch_opts
+            .ignore_default_args
+            .push(OsStr::new("--enable-automation"));
+        launch_opts
+            .args
+            .push(OsStr::new("--disable-blink-features=AutomationControlled"));
 
         // Set the browser's idle timeout to 1 hour (default is 30 seconds) to prevent the session from closing too soon
         launch_opts.idle_browser_timeout = Duration::from_secs(60 * 60);
