@@ -1,7 +1,6 @@
-use crate::error::{BrowserError, Result};
-use crate::tools::html_to_markdown::convert_html_to_markdown;
-use crate::tools::readability_script::READABILITY_SCRIPT;
-use crate::tools::{Tool, ToolContext, ToolResult};
+use crate::{error::{BrowserError, Result},
+            tools::{Tool, ToolContext, ToolResult, html_to_markdown::convert_html_to_markdown,
+                    readability_script::READABILITY_SCRIPT}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

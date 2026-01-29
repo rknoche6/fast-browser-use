@@ -51,12 +51,9 @@ pub use switch_tab::SwitchTabParams;
 pub use tab_list::TabListParams;
 pub use wait::WaitParams;
 
-use crate::browser::BrowserSession;
-use crate::dom::DomTree;
-use crate::error::Result;
+use crate::{browser::BrowserSession, dom::DomTree, error::Result};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 /// Tool execution context
 pub struct ToolContext<'a> {

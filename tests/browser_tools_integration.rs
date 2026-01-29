@@ -1,8 +1,6 @@
-use browser_use::tools::{
-    HoverParams, ScrollParams, SelectParams, Tool, ToolContext, hover::HoverTool,
-    scroll::ScrollTool, select::SelectTool,
-};
-use browser_use::{BrowserSession, LaunchOptions};
+use browser_use::{BrowserSession, LaunchOptions,
+                  tools::{HoverParams, ScrollParams, SelectParams, Tool, ToolContext,
+                          hover::HoverTool, scroll::ScrollTool, select::SelectTool}};
 use log::info;
 
 #[test]

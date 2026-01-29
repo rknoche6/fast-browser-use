@@ -1,5 +1,5 @@
-use browser_use::tools::{GetMarkdownParams, Tool, ToolContext, markdown::GetMarkdownTool};
-use browser_use::{BrowserSession, LaunchOptions};
+use browser_use::{BrowserSession, LaunchOptions,
+                  tools::{GetMarkdownParams, Tool, ToolContext, markdown::GetMarkdownTool}};
 use log::info;
 
 /// Test basic markdown extraction from a simple HTML page

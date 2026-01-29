@@ -1,6 +1,6 @@
-use crate::dom::{AriaChild, AriaNode, yaml_escape_key_if_needed, yaml_escape_value_if_needed};
-use crate::error::Result;
-use crate::tools::{Tool, ToolContext, ToolResult};
+use crate::{dom::{AriaChild, AriaNode, yaml_escape_key_if_needed, yaml_escape_value_if_needed},
+            error::Result,
+            tools::{Tool, ToolContext, ToolResult}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

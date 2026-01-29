@@ -2,12 +2,10 @@
 
 use crate::browser::BrowserSession;
 use log::debug;
-use rmcp::{
-    ServerHandler,
-    handler::server::tool::ToolRouter,
-    model::{ServerCapabilities, ServerInfo},
-    tool_handler,
-};
+use rmcp::{ServerHandler,
+           handler::server::tool::ToolRouter,
+           model::{ServerCapabilities, ServerInfo},
+           tool_handler};
 use std::sync::{Arc, Mutex};
 
 /// MCP Server wrapper for BrowserSession

@@ -1,6 +1,6 @@
-use crate::error::{BrowserError, Result};
-use crate::tools::snapshot::{RenderMode, render_aria_tree};
-use crate::tools::{Tool, ToolContext, ToolResult};
+use crate::{error::{BrowserError, Result},
+            tools::{Tool, ToolContext, ToolResult,
+                    snapshot::{RenderMode, render_aria_tree}}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

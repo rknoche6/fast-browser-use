@@ -1,5 +1,5 @@
-use crate::dom::element::{AriaChild, AriaNode};
-use crate::error::{BrowserError, Result};
+use crate::{dom::element::{AriaChild, AriaNode},
+            error::{BrowserError, Result}};
 use headless_chrome::Tab;
 use std::sync::Arc;
 

@@ -1,7 +1,7 @@
-use crate::error::Result;
-use crate::tools::snapshot::{RenderMode, render_aria_tree};
-use crate::tools::utils::normalize_url;
-use crate::tools::{Tool, ToolContext, ToolResult};
+use crate::{error::Result,
+            tools::{Tool, ToolContext, ToolResult,
+                    snapshot::{RenderMode, render_aria_tree},
+                    utils::normalize_url}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

@@ -1,5 +1,5 @@
-use crate::error::Result;
-use crate::tools::{Tool, ToolContext, ToolResult};
+use crate::{error::Result,
+            tools::{Tool, ToolContext, ToolResult}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
