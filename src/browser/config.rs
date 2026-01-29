@@ -3,25 +3,20 @@ use std::path::PathBuf;
 /// Options for launching a new browser instance
 #[derive(Debug, Clone)]
 pub struct LaunchOptions {
-    /// Whether to run browser in headless mode (default: true)
     pub headless: bool,
 
     /// Custom Chrome/Chromium binary path
     pub chrome_path: Option<PathBuf>,
 
-    /// Browser window width (default: 1280)
     pub window_width: u32,
 
-    /// Browser window height (default: 720)
     pub window_height: u32,
 
     /// User data directory for browser profile
     pub user_data_dir: Option<PathBuf>,
 
-    /// Enable sandbox mode (default: true)
     pub sandbox: bool,
 
-    /// Timeout for browser launch in milliseconds (default: 30000)
     pub launch_timeout: u64,
 }
 

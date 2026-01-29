@@ -1,8 +1,3 @@
-//! Browser-use MCP Server
-//!
-//! This binary provides a Model Context Protocol (MCP) server for browser automation.
-//! It exposes browser automation tools that can be used by AI assistants and other MCP clients.
-
 use browser_use::{browser::LaunchOptions, mcp::BrowserServer};
 use clap::{Parser, ValueEnum};
 use log::{debug, info};
@@ -19,11 +14,8 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum Transport {
-    /// Standard input/output transport (default)
     Stdio,
-    /// Server-Sent Events transport
     Sse,
-    /// HTTP streamable transport
     Http,
 }
 
@@ -82,7 +74,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    // Configure browser launch options
     let options = LaunchOptions {
         headless: !cli.headed,
         ..Default::default()
@@ -114,7 +105,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("User data directory: {}", dir);
     }
 
-    // Route to appropriate transport
     match cli.transport {
         Transport::Stdio => {
             info!("Transport: stdio");
@@ -177,7 +167,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let bind_addr = format!("127.0.0.1:{}", cli.port);
 
-            // Create SSE server configuration
             let config = SseServerConfig {
                 bind: bind_addr.parse()?,
                 sse_path: cli.sse_path.clone(),
@@ -186,7 +175,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 sse_keep_alive: None,
             };
 
-            // Create SSE server and router
             let (sse_server, router) = SseServer::new(config);
 
             info!(
@@ -211,7 +199,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let bind_addr = format!("127.0.0.1:{}", cli.port);
 
-            // Create service factory closure
             let service_factory = move || {
                 BrowserServer::with_options(options.clone())
                     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))

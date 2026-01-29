@@ -1,7 +1,5 @@
 # browser-use
 
-[中文文档](README_CN.md)
-
 A lightweight Rust library for browser automation via Chrome DevTools Protocol (CDP).
 
 ## ✨ Highlights
@@ -59,11 +57,3 @@ cargo run --bin mcp-server -- --headed
 
 - Rust 1.70+
 - Chrome or Chromium installed
-
-## Acknowledgments
-
-This project was inspired by and references [agent-infra/mcp-server-browser](https://github.com/bytedance/UI-TARS-desktop/tree/main/packages/agent-infra/mcp-servers/browser).
-
-## License
-
-MIT
