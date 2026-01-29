@@ -29,5 +29,5 @@ JSON.stringify(
       id: element.id,
       className: element.className,
     };
-  })()
+  })(),
 );

@@ -19,6 +19,5 @@ JSON.stringify(
       selectedValue: element.value,
       selectedText: element.options[element.selectedIndex]?.text ?? null,
     };
-  })()
+  })(),
 );
-
