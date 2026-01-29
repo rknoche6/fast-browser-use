@@ -1,5 +1,5 @@
-use crate::error::{BrowserError, Result};
-use crate::tools::{Tool, ToolContext, ToolResult};
+use crate::{error::{BrowserError, Result},
+            tools::{Tool, ToolContext, ToolResult}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

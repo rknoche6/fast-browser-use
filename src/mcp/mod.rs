@@ -6,12 +6,10 @@ pub mod handler;
 pub use handler::BrowserServer;
 
 use crate::tools::{self, Tool, ToolContext, ToolResult as InternalToolResult};
-use rmcp::{
-    ErrorData as McpError,
-    handler::server::wrapper::Parameters,
-    model::{CallToolResult, Content},
-    tool, tool_router,
-};
+use rmcp::{ErrorData as McpError,
+           handler::server::wrapper::Parameters,
+           model::{CallToolResult, Content},
+           tool, tool_router};
 
 /// Convert internal ToolResult to MCP CallToolResult
 fn convert_result(result: InternalToolResult) -> Result<CallToolResult, McpError> {

@@ -1,8 +1,7 @@
-use browser_use::tools::{
-    CloseTabParams, NewTabParams, SwitchTabParams, TabListParams, Tool, ToolContext,
-    close_tab::CloseTabTool, new_tab::NewTabTool, switch_tab::SwitchTabTool, tab_list::TabListTool,
-};
-use browser_use::{BrowserSession, LaunchOptions};
+use browser_use::{BrowserSession, LaunchOptions,
+                  tools::{CloseTabParams, NewTabParams, SwitchTabParams, TabListParams, Tool,
+                          ToolContext, close_tab::CloseTabTool, new_tab::NewTabTool,
+                          switch_tab::SwitchTabTool, tab_list::TabListTool}};
 use log::info;
 
 #[test]

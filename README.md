@@ -17,6 +17,12 @@ A lightweight Rust library for browser automation via Chrome DevTools Protocol (
 cargo add browser-use
 ```
 
+## Styling
+
+```bash
+cargo +nightly fmt
+```
+
 ## Quick Start
 
 ```rust

@@ -3,18 +3,16 @@
 //! This binary provides a Model Context Protocol (MCP) server for browser automation.
 //! It exposes browser automation tools that can be used by AI assistants and other MCP clients.
 
-use browser_use::browser::LaunchOptions;
-use browser_use::mcp::BrowserServer;
+use browser_use::{browser::LaunchOptions, mcp::BrowserServer};
 use clap::{Parser, ValueEnum};
 use log::{debug, info};
 use rmcp::{ServiceExt, transport::stdio};
 use std::io::{stdin, stdout};
 
 #[cfg(feature = "mcp-server")]
-use rmcp::transport::{
-    sse_server::{SseServer, SseServerConfig},
-    streamable_http_server::{StreamableHttpService, session::local::LocalSessionManager},
-};
+use rmcp::transport::{sse_server::{SseServer, SseServerConfig},
+                      streamable_http_server::{StreamableHttpService,
+                                               session::local::LocalSessionManager}};
 
 #[cfg(feature = "mcp-server")]
 use tokio_util::sync::CancellationToken;

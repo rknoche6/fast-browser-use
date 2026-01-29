@@ -1,8 +1,6 @@
-use browser_use::tools::{
-    CloseParams, GoBackParams, GoForwardParams, Tool, ToolContext, close::CloseTool,
-    go_back::GoBackTool, go_forward::GoForwardTool,
-};
-use browser_use::{BrowserSession, LaunchOptions};
+use browser_use::{BrowserSession, LaunchOptions,
+                  tools::{CloseParams, GoBackParams, GoForwardParams, Tool, ToolContext,
+                          close::CloseTool, go_back::GoBackTool, go_forward::GoForwardTool}};
 use log::info;
 
 #[test]

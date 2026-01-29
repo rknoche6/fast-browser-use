@@ -1,11 +1,9 @@
-use crate::browser::config::{ConnectionOptions, LaunchOptions};
-use crate::dom::DomTree;
-use crate::error::{BrowserError, Result};
-use crate::tools::{ToolContext, ToolRegistry};
+use crate::{browser::config::{ConnectionOptions, LaunchOptions},
+            dom::DomTree,
+            error::{BrowserError, Result},
+            tools::{ToolContext, ToolRegistry}};
 use headless_chrome::{Browser, Tab};
-use std::ffi::OsStr;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{ffi::OsStr, sync::Arc, time::Duration};
 
 /// Wrapper for Tab and Element to maintain proper lifetime relationships
 pub struct TabElement<'a> {
