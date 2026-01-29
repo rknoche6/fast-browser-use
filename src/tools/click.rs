@@ -32,8 +32,7 @@ impl Tool for ClickTool {
             (Some(_), Some(_)) => {
                 return Err(BrowserError::ToolExecutionFailed {
                     tool: "click".to_string(),
-                    reason: "Cannot specify both 'selector' and 'index'. Use one or the other."
-                        .to_string(),
+                    reason: "Cannot specify both 'selector' and 'index'. Use one or the other.".to_string(),
                 });
             }
             (None, None) => {
@@ -51,10 +50,7 @@ impl Tool for ClickTool {
             let element = context.session.find_element(&tab, &selector)?;
             element
                 .click()
-                .map_err(|e| BrowserError::ToolExecutionFailed {
-                    tool: "click".to_string(),
-                    reason: e.to_string(),
-                })?;
+                .map_err(|e| BrowserError::ToolExecutionFailed { tool: "click".to_string(), reason: e.to_string() })?;
 
             Ok(ToolResult::success_with(serde_json::json!({
                 "selector": selector,
@@ -64,9 +60,9 @@ impl Tool for ClickTool {
             // Index path - convert index to CSS selector
             let css_selector = {
                 let dom = context.get_dom()?;
-                let selector = dom.get_selector(index).ok_or_else(|| {
-                    BrowserError::ElementNotFound(format!("No element with index {}", index))
-                })?;
+                let selector = dom
+                    .get_selector(index)
+                    .ok_or_else(|| BrowserError::ElementNotFound(format!("No element with index {}", index)))?;
                 selector.clone()
             };
 
@@ -74,10 +70,7 @@ impl Tool for ClickTool {
             let element = context.session.find_element(&tab, &css_selector)?;
             element
                 .click()
-                .map_err(|e| BrowserError::ToolExecutionFailed {
-                    tool: "click".to_string(),
-                    reason: e.to_string(),
-                })?;
+                .map_err(|e| BrowserError::ToolExecutionFailed { tool: "click".to_string(), reason: e.to_string() })?;
 
             Ok(ToolResult::success_with(serde_json::json!({
                 "index": index,

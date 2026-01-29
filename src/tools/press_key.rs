@@ -21,17 +21,12 @@ impl Tool for PressKeyTool {
         "press_key"
     }
 
-    fn execute_typed(
-        &self,
-        params: PressKeyParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
-        context.session.tab()?.press_key(&params.key).map_err(|e| {
-            BrowserError::ToolExecutionFailed {
-                tool: "press_key".to_string(),
-                reason: e.to_string(),
-            }
-        })?;
+    fn execute_typed(&self, params: PressKeyParams, context: &mut ToolContext) -> Result<ToolResult> {
+        context
+            .session
+            .tab()?
+            .press_key(&params.key)
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "press_key".to_string(), reason: e.to_string() })?;
 
         Ok(ToolResult::success_with(serde_json::json!({
             "key": params.key

@@ -21,24 +21,16 @@ pub struct BrowserServer {
 impl BrowserServer {
     /// Create a new browser server with default launch options
     pub fn new() -> Result<Self, String> {
-        let session =
-            BrowserSession::new().map_err(|e| format!("Failed to launch browser: {}", e))?;
+        let session = BrowserSession::new().map_err(|e| format!("Failed to launch browser: {}", e))?;
 
-        Ok(Self {
-            session: Arc::new(Mutex::new(session)),
-            tool_router: Self::tool_router(),
-        })
+        Ok(Self { session: Arc::new(Mutex::new(session)), tool_router: Self::tool_router() })
     }
 
     /// Create a new browser server with custom launch options
     pub fn with_options(options: crate::browser::LaunchOptions) -> Result<Self, String> {
-        let session = BrowserSession::launch(options)
-            .map_err(|e| format!("Failed to launch browser: {}", e))?;
+        let session = BrowserSession::launch(options).map_err(|e| format!("Failed to launch browser: {}", e))?;
 
-        Ok(Self {
-            session: Arc::new(Mutex::new(session)),
-            tool_router: Self::tool_router(),
-        })
+        Ok(Self { session: Arc::new(Mutex::new(session)), tool_router: Self::tool_router() })
     }
 
     /// Get a reference to the browser session (blocking lock)

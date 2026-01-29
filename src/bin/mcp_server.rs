@@ -6,8 +6,7 @@ use std::io::{stdin, stdout};
 
 #[cfg(feature = "mcp-server")]
 use rmcp::transport::{sse_server::{SseServer, SseServerConfig},
-                      streamable_http_server::{StreamableHttpService,
-                                               session::local::LocalSessionManager}};
+                      streamable_http_server::{StreamableHttpService, session::local::LocalSessionManager}};
 
 #[cfg(feature = "mcp-server")]
 use tokio_util::sync::CancellationToken;
@@ -74,20 +73,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let options = LaunchOptions {
-        headless: !cli.headed,
-        ..Default::default()
-    };
+    let options = LaunchOptions { headless: !cli.headed, ..Default::default() };
 
     info!("Browser-use MCP Server v{}", env!("CARGO_PKG_VERSION"));
-    info!(
-        "Browser mode: {}",
-        if options.headless {
-            "headless"
-        } else {
-            "headed"
-        }
-    );
+    info!("Browser mode: {}", if options.headless { "headless" } else { "headed" });
 
     if let Some(ref path) = cli.executable_path {
         info!("Browser executable: {}", path);
@@ -117,10 +106,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Set up signal handler for graceful shutdown
             #[cfg(unix)]
             {
-                let mut sigterm =
-                    tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
-                let mut sigint =
-                    tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
+                let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+                let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
 
                 tokio::select! {
                     quit_reason = server.waiting() => {
@@ -177,15 +164,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let (sse_server, router) = SseServer::new(config);
 
-            info!(
-                "Ready to accept MCP connections at http://{}{}",
-                bind_addr, cli.sse_path
-            );
+            info!("Ready to accept MCP connections at http://{}{}", bind_addr, cli.sse_path);
 
             // Register service factory for each connection
             let _cancellation_token = sse_server.with_service(move || {
-                BrowserServer::with_options(options.clone())
-                    .expect("Failed to create browser server")
+                BrowserServer::with_options(options.clone()).expect("Failed to create browser server")
             });
 
             // Start HTTP server with SSE router
@@ -204,18 +187,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
             };
 
-            let http_service = StreamableHttpService::new(
-                service_factory,
-                LocalSessionManager::default().into(),
-                Default::default(),
-            );
+            let http_service =
+                StreamableHttpService::new(service_factory, LocalSessionManager::default().into(), Default::default());
 
             let router = axum::Router::new().nest_service(&cli.http_path, http_service);
 
-            info!(
-                "Ready to accept MCP connections at http://{}{}",
-                bind_addr, cli.http_path
-            );
+            info!("Ready to accept MCP connections at http://{}{}", bind_addr, cli.http_path);
 
             let listener = tokio::net::TcpListener::bind(bind_addr).await?;
             axum::serve(listener, router).await?;

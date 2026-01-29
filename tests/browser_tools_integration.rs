@@ -1,13 +1,12 @@
 use browser_use::{BrowserSession, LaunchOptions,
-                  tools::{HoverParams, ScrollParams, SelectParams, Tool, ToolContext,
-                          hover::HoverTool, scroll::ScrollTool, select::SelectTool}};
+                  tools::{HoverParams, ScrollParams, SelectParams, Tool, ToolContext, hover::HoverTool,
+                          scroll::ScrollTool, select::SelectTool}};
 use log::info;
 
 #[test]
 #[ignore] // Requires Chrome to be installed
 fn test_select_tool() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a page with a select dropdown
     let html = r#"
@@ -41,11 +40,7 @@ fn test_select_tool() {
     // Execute the tool to select an option
     let result = tool
         .execute_typed(
-            SelectParams {
-                selector: Some("#country".to_string()),
-                index: None,
-                value: "uk".to_string(),
-            },
+            SelectParams { selector: Some("#country".to_string()), index: None, value: "uk".to_string() },
             &mut context,
         )
         .expect("Failed to execute select tool");
@@ -55,10 +50,7 @@ fn test_select_tool() {
     assert!(result.data.is_some());
 
     let data = result.data.unwrap();
-    info!(
-        "Select result: {}",
-        serde_json::to_string_pretty(&data).unwrap()
-    );
+    info!("Select result: {}", serde_json::to_string_pretty(&data).unwrap());
 
     assert_eq!(data["value"].as_str(), Some("uk"));
     assert_eq!(data["selectedText"].as_str(), Some("United Kingdom"));
@@ -67,8 +59,7 @@ fn test_select_tool() {
 #[test]
 #[ignore]
 fn test_hover_tool() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a page with a hoverable element
     let html = r#"
@@ -97,13 +88,7 @@ fn test_hover_tool() {
 
     // Execute the tool
     let result = tool
-        .execute_typed(
-            HoverParams {
-                selector: Some("#hover-btn".to_string()),
-                index: None,
-            },
-            &mut context,
-        )
+        .execute_typed(HoverParams { selector: Some("#hover-btn".to_string()), index: None }, &mut context)
         .expect("Failed to execute hover tool");
 
     // Verify the result
@@ -111,10 +96,7 @@ fn test_hover_tool() {
     assert!(result.data.is_some());
 
     let data = result.data.unwrap();
-    info!(
-        "Hover result: {}",
-        serde_json::to_string_pretty(&data).unwrap()
-    );
+    info!("Hover result: {}", serde_json::to_string_pretty(&data).unwrap());
 
     assert_eq!(data["selector"].as_str(), Some("#hover-btn"));
 }
@@ -122,8 +104,7 @@ fn test_hover_tool() {
 #[test]
 #[ignore]
 fn test_scroll_tool_with_amount() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a long page
     let html = r#"
@@ -147,32 +128,24 @@ fn test_scroll_tool_with_amount() {
     let mut context = ToolContext::new(&session);
 
     // Execute the tool to scroll down 500 pixels
-    let result = tool
-        .execute_typed(ScrollParams { amount: Some(500) }, &mut context)
-        .expect("Failed to execute scroll tool");
+    let result =
+        tool.execute_typed(ScrollParams { amount: Some(500) }, &mut context).expect("Failed to execute scroll tool");
 
     // Verify the result
     assert!(result.success, "Tool execution should succeed");
     assert!(result.data.is_some());
 
     let data = result.data.unwrap();
-    info!(
-        "Scroll result: {}",
-        serde_json::to_string_pretty(&data).unwrap()
-    );
+    info!("Scroll result: {}", serde_json::to_string_pretty(&data).unwrap());
 
     let scrolled = data["scrolled"].as_i64();
-    assert!(
-        scrolled.is_some() && scrolled.unwrap() > 0,
-        "Should have scrolled"
-    );
+    assert!(scrolled.is_some() && scrolled.unwrap() > 0, "Should have scrolled");
 }
 
 #[test]
 #[ignore]
 fn test_scroll_tool_to_bottom() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a page
     let html = r#"
@@ -196,19 +169,15 @@ fn test_scroll_tool_to_bottom() {
 
     // Execute the tool multiple times to reach bottom
     for _ in 0..10 {
-        let result = tool
-            .execute_typed(ScrollParams { amount: None }, &mut context)
-            .expect("Failed to execute scroll tool");
+        let result =
+            tool.execute_typed(ScrollParams { amount: None }, &mut context).expect("Failed to execute scroll tool");
 
         assert!(result.success);
 
         let data = result.data.as_ref().unwrap();
         let is_at_bottom = data["isAtBottom"].as_bool().unwrap_or(false);
 
-        info!(
-            "Scroll iteration: scrolled={}, isAtBottom={}",
-            data["scrolled"], is_at_bottom
-        );
+        info!("Scroll iteration: scrolled={}, isAtBottom={}", data["scrolled"], is_at_bottom);
 
         if is_at_bottom {
             info!("Reached bottom of page");
@@ -222,8 +191,7 @@ fn test_scroll_tool_to_bottom() {
 #[test]
 #[ignore]
 fn test_select_with_index() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a page with a select dropdown
     let html = r#"
@@ -252,22 +220,13 @@ fn test_select_with_index() {
     let mut context = ToolContext::new(&session);
 
     // Try to select using index (the select element should have index 0 since it's the first interactive element)
-    let result = tool.execute_typed(
-        SelectParams {
-            selector: None,
-            index: Some(0),
-            value: "green".to_string(),
-        },
-        &mut context,
-    );
+    let result =
+        tool.execute_typed(SelectParams { selector: None, index: Some(0), value: "green".to_string() }, &mut context);
 
     // This might fail if DOM indexing doesn't include select elements, which is acceptable
     // The test is mainly to verify the API works
     if let Ok(result) = result {
-        info!(
-            "Select with index result: {}",
-            serde_json::to_string_pretty(&result.data.unwrap()).unwrap()
-        );
+        info!("Select with index result: {}", serde_json::to_string_pretty(&result.data.unwrap()).unwrap());
     } else {
         info!("Select with index failed (may be expected if select not indexed)");
     }

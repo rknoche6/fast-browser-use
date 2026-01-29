@@ -18,11 +18,7 @@ impl Tool for CloseTabTool {
         "close_tab"
     }
 
-    fn execute_typed(
-        &self,
-        _params: CloseTabParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, _params: CloseTabParams, context: &mut ToolContext) -> Result<ToolResult> {
         // Get the current tab info before closing
         let active_tab = context.session.tab()?;
         let tab_title = active_tab.get_title().unwrap_or_default();
@@ -30,20 +26,14 @@ impl Tool for CloseTabTool {
 
         // Get the current tab index
         let tabs = context.session.get_tabs()?;
-        let current_index = tabs
-            .iter()
-            .position(|tab| std::sync::Arc::ptr_eq(tab, &active_tab))
-            .unwrap_or(0);
+        let current_index = tabs.iter().position(|tab| std::sync::Arc::ptr_eq(tab, &active_tab)).unwrap_or(0);
 
         // Close the active tab
-        active_tab.close(true).map_err(|e| {
-            crate::error::BrowserError::TabOperationFailed(format!("Failed to close tab: {}", e))
-        })?;
+        active_tab
+            .close(true)
+            .map_err(|e| crate::error::BrowserError::TabOperationFailed(format!("Failed to close tab: {}", e)))?;
 
-        let message = format!(
-            "Closed tab [{}]: {} ({})",
-            current_index, tab_title, tab_url
-        );
+        let message = format!("Closed tab [{}]: {} ({})", current_index, tab_title, tab_url);
 
         Ok(ToolResult::success_with(serde_json::json!({
             "index": current_index,

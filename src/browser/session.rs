@@ -26,12 +26,8 @@ impl BrowserSession {
         let mut launch_opts = headless_chrome::LaunchOptions::default();
 
         // Ignore default arguments to prevent detection by anti-bot services
-        launch_opts
-            .ignore_default_args
-            .push(OsStr::new("--enable-automation"));
-        launch_opts
-            .args
-            .push(OsStr::new("--disable-blink-features=AutomationControlled"));
+        launch_opts.ignore_default_args.push(OsStr::new("--enable-automation"));
+        launch_opts.args.push(OsStr::new("--disable-blink-features=AutomationControlled"));
 
         // Set the browser's idle timeout to 1 hour (default is 30 seconds) to prevent the session from closing too soon
         launch_opts.idle_browser_timeout = Duration::from_secs(60 * 60);
@@ -56,28 +52,18 @@ impl BrowserSession {
         launch_opts.sandbox = options.sandbox;
 
         // Launch browser
-        let browser =
-            Browser::new(launch_opts).map_err(|e| BrowserError::LaunchFailed(e.to_string()))?;
+        let browser = Browser::new(launch_opts).map_err(|e| BrowserError::LaunchFailed(e.to_string()))?;
 
-        browser
-            .new_tab()
-            .map_err(|e| BrowserError::LaunchFailed(format!("Failed to create tab: {}", e)))?;
+        browser.new_tab().map_err(|e| BrowserError::LaunchFailed(format!("Failed to create tab: {}", e)))?;
 
-        Ok(Self {
-            browser,
-            tool_registry: ToolRegistry::with_defaults(),
-        })
+        Ok(Self { browser, tool_registry: ToolRegistry::with_defaults() })
     }
 
     /// Connect to an existing browser instance via WebSocket
     pub fn connect(options: ConnectionOptions) -> Result<Self> {
-        let browser = Browser::connect(options.ws_url)
-            .map_err(|e| BrowserError::ConnectionFailed(e.to_string()))?;
+        let browser = Browser::connect(options.ws_url).map_err(|e| BrowserError::ConnectionFailed(e.to_string()))?;
 
-        Ok(Self {
-            browser,
-            tool_registry: ToolRegistry::with_defaults(),
-        })
+        Ok(Self { browser, tool_registry: ToolRegistry::with_defaults() })
     }
 
     /// Launch a browser with default options
@@ -92,9 +78,10 @@ impl BrowserSession {
 
     /// Create a new tab and set it as active
     pub fn new_tab(&mut self) -> Result<Arc<Tab>> {
-        let tab = self.browser.new_tab().map_err(|e| {
-            BrowserError::TabOperationFailed(format!("Failed to create tab: {}", e))
-        })?;
+        let tab = self
+            .browser
+            .new_tab()
+            .map_err(|e| BrowserError::TabOperationFailed(format!("Failed to create tab: {}", e)))?;
         Ok(tab)
     }
 
@@ -116,10 +103,7 @@ impl BrowserSession {
 
         // First pass: check for both visibility and focus (strongest signal)
         for tab in &tabs {
-            let result = tab.evaluate(
-                "document.visibilityState === 'visible' && document.hasFocus()",
-                false,
-            );
+            let result = tab.evaluate("document.visibilityState === 'visible' && document.hasFocus()", false);
             match result {
                 Ok(remote_object) => {
                     if let Some(value) = remote_object.value {
@@ -150,16 +134,12 @@ impl BrowserSession {
             }
         }
 
-        Err(BrowserError::TabOperationFailed(
-            "No active tab found".to_string(),
-        ))
+        Err(BrowserError::TabOperationFailed("No active tab found".to_string()))
     }
 
     /// Close the active tab
     pub fn close_active_tab(&mut self) -> Result<()> {
-        self.tab()?
-            .close(true)
-            .map_err(|e| BrowserError::TabOperationFailed(format!("Failed to close tab: {}", e)))?;
+        self.tab()?.close(true).map_err(|e| BrowserError::TabOperationFailed(format!("Failed to close tab: {}", e)))?;
 
         Ok(())
     }
@@ -171,9 +151,9 @@ impl BrowserSession {
 
     /// Navigate to a URL using the active tab
     pub fn navigate(&self, url: &str) -> Result<()> {
-        self.tab()?.navigate_to(url).map_err(|e| {
-            BrowserError::NavigationFailed(format!("Failed to navigate to {}: {}", url, e))
-        })?;
+        self.tab()?
+            .navigate_to(url)
+            .map_err(|e| BrowserError::NavigationFailed(format!("Failed to navigate to {}: {}", url, e)))?;
 
         Ok(())
     }
@@ -198,14 +178,9 @@ impl BrowserSession {
     }
 
     /// Find an element by CSS selector using the provided tab
-    pub fn find_element<'a>(
-        &self,
-        tab: &'a Arc<Tab>,
-        css_selector: &str,
-    ) -> Result<headless_chrome::Element<'a>> {
-        tab.find_element(css_selector).map_err(|e| {
-            BrowserError::ElementNotFound(format!("Element '{}' not found: {}", css_selector, e))
-        })
+    pub fn find_element<'a>(&self, tab: &'a Arc<Tab>, css_selector: &str) -> Result<headless_chrome::Element<'a>> {
+        tab.find_element(css_selector)
+            .map_err(|e| BrowserError::ElementNotFound(format!("Element '{}' not found: {}", css_selector, e)))
     }
 
     /// Get the tool registry
@@ -219,11 +194,7 @@ impl BrowserSession {
     }
 
     /// Execute a tool by name
-    pub fn execute_tool(
-        &self,
-        name: &str,
-        params: serde_json::Value,
-    ) -> Result<crate::tools::ToolResult> {
+    pub fn execute_tool(&self, name: &str, params: serde_json::Value) -> Result<crate::tools::ToolResult> {
         let mut context = ToolContext::new(self);
         self.tool_registry.execute(name, params, &mut context)
     }
@@ -309,8 +280,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_get_active_tab() {
-        let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-            .expect("Failed to launch browser");
+        let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
         let tab = session.get_active_tab();
         assert!(tab.is_ok());
@@ -327,8 +297,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_navigate() {
-        let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-            .expect("Failed to launch browser");
+        let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
         let result = session.navigate("about:blank");
         assert!(result.is_ok());
@@ -337,8 +306,8 @@ mod tests {
     #[test]
     #[ignore]
     fn test_new_tab() {
-        let mut session = BrowserSession::launch(LaunchOptions::new().headless(true))
-            .expect("Failed to launch browser");
+        let mut session =
+            BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
         let result = session.new_tab();
         assert!(result.is_ok());

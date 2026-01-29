@@ -59,10 +59,7 @@ pub fn yaml_string_needs_quotes(s: &str) -> bool {
 
     // YAML boolean/null values
     let lower = s.to_lowercase();
-    if matches!(
-        lower.as_str(),
-        "y" | "n" | "yes" | "no" | "true" | "false" | "on" | "off" | "null"
-    ) {
+    if matches!(lower.as_str(), "y" | "n" | "yes" | "no" | "true" | "false" | "on" | "off" | "null") {
         return true;
     }
 
@@ -145,17 +142,8 @@ mod tests {
     #[test]
     fn test_yaml_escape_value_if_needed() {
         assert_eq!(yaml_escape_value_if_needed("simple"), "simple");
-        assert_eq!(
-            yaml_escape_value_if_needed("hello\nworld"),
-            "\"hello\\nworld\""
-        );
-        assert_eq!(
-            yaml_escape_value_if_needed("quote\"here"),
-            "\"quote\\\"here\""
-        );
-        assert_eq!(
-            yaml_escape_value_if_needed("back\\slash"),
-            "\"back\\\\slash\""
-        );
+        assert_eq!(yaml_escape_value_if_needed("hello\nworld"), "\"hello\\nworld\"");
+        assert_eq!(yaml_escape_value_if_needed("quote\"here"), "\"quote\\\"here\"");
+        assert_eq!(yaml_escape_value_if_needed("back\\slash"), "\"back\\\\slash\"");
     }
 }

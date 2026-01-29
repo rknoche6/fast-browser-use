@@ -38,8 +38,7 @@ impl Tool for InputTool {
             (Some(_), Some(_)) => {
                 return Err(BrowserError::ToolExecutionFailed {
                     tool: "input".to_string(),
-                    reason: "Cannot specify both 'selector' and 'index'. Use one or the other."
-                        .to_string(),
+                    reason: "Cannot specify both 'selector' and 'index'. Use one or the other.".to_string(),
                 });
             }
             (None, None) => {
@@ -56,9 +55,9 @@ impl Tool for InputTool {
             selector
         } else if let Some(index) = params.index {
             let dom = context.get_dom()?;
-            let selector = dom.get_selector(index).ok_or_else(|| {
-                BrowserError::ElementNotFound(format!("No element with index {}", index))
-            })?;
+            let selector = dom
+                .get_selector(index)
+                .ok_or_else(|| BrowserError::ElementNotFound(format!("No element with index {}", index)))?;
             selector.clone()
         } else {
             unreachable!("Validation above ensures one field is Some")
@@ -78,10 +77,7 @@ impl Tool for InputTool {
 
         element
             .type_into(&params.text)
-            .map_err(|e| BrowserError::ToolExecutionFailed {
-                tool: "input".to_string(),
-                reason: e.to_string(),
-            })?;
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "input".to_string(), reason: e.to_string() })?;
 
         let snapshot = {
             let dom = context.get_dom()?;

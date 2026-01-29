@@ -91,10 +91,7 @@ pub struct ConnectionOptions {
 impl ConnectionOptions {
     /// Create new ConnectionOptions with WebSocket URL
     pub fn new<S: Into<String>>(ws_url: S) -> Self {
-        Self {
-            ws_url: ws_url.into(),
-            timeout: 10000,
-        }
+        Self { ws_url: ws_url.into(), timeout: 10000 }
     }
 
     /// Builder method: set connection timeout
@@ -120,11 +117,7 @@ mod tests {
 
     #[test]
     fn test_launch_options_builder() {
-        let opts = LaunchOptions::new()
-            .headless(false)
-            .window_size(1920, 1080)
-            .sandbox(false)
-            .launch_timeout(60000);
+        let opts = LaunchOptions::new().headless(false).window_size(1920, 1080).sandbox(false).launch_timeout(60000);
 
         assert!(!opts.headless);
         assert_eq!(opts.window_width, 1920);

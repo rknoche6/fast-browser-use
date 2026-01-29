@@ -34,8 +34,7 @@ impl Tool for HoverTool {
             (Some(_), Some(_)) => {
                 return Err(BrowserError::ToolExecutionFailed {
                     tool: "hover".to_string(),
-                    reason: "Cannot specify both 'selector' and 'index'. Use one or the other."
-                        .to_string(),
+                    reason: "Cannot specify both 'selector' and 'index'. Use one or the other.".to_string(),
                 });
             }
             (None, None) => {
@@ -51,9 +50,9 @@ impl Tool for HoverTool {
             selector
         } else if let Some(index) = params.index {
             let dom = context.get_dom()?;
-            let selector = dom.get_selector(index).ok_or_else(|| {
-                BrowserError::ElementNotFound(format!("No element with index {}", index))
-            })?;
+            let selector = dom
+                .get_selector(index)
+                .ok_or_else(|| BrowserError::ElementNotFound(format!("No element with index {}", index)))?;
             selector.clone()
         } else {
             unreachable!("Validation above ensures one field is Some")
@@ -62,29 +61,21 @@ impl Tool for HoverTool {
         // Find the element (to verify it exists)
 
         // Scroll into view if needed, then hover
-        let selector_json =
-            serde_json::to_string(&css_selector).expect("serializing CSS selector never fails");
+        let selector_json = serde_json::to_string(&css_selector).expect("serializing CSS selector never fails");
         let hover_js = HOVER_JS.replace("__SELECTOR__", &selector_json);
 
         let result = context
             .session
             .tab()?
             .evaluate(&hover_js, false)
-            .map_err(|e| BrowserError::ToolExecutionFailed {
-                tool: "hover".to_string(),
-                reason: e.to_string(),
-            })?;
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "hover".to_string(), reason: e.to_string() })?;
 
         // Parse the JSON string returned by JavaScript
-        let result_json: serde_json::Value = if let Some(serde_json::Value::String(json_str)) =
-            result.value
-        {
+        let result_json: serde_json::Value = if let Some(serde_json::Value::String(json_str)) = result.value {
             serde_json::from_str(&json_str)
                 .unwrap_or(serde_json::json!({"success": false, "error": "Failed to parse result"}))
         } else {
-            result
-                .value
-                .unwrap_or(serde_json::json!({"success": false, "error": "No result returned"}))
+            result.value.unwrap_or(serde_json::json!({"success": false, "error": "No result returned"}))
         };
 
         if result_json["success"].as_bool() == Some(true) {
@@ -99,10 +90,7 @@ impl Tool for HoverTool {
         } else {
             Err(BrowserError::ToolExecutionFailed {
                 tool: "hover".to_string(),
-                reason: result_json["error"]
-                    .as_str()
-                    .unwrap_or("Unknown error")
-                    .to_string(),
+                reason: result_json["error"].as_str().unwrap_or("Unknown error").to_string(),
             })
         }
     }

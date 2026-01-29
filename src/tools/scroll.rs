@@ -35,35 +35,22 @@ impl Tool for ScrollTool {
             .session
             .tab()?
             .evaluate(&scroll_js, true)
-            .map_err(|e| BrowserError::ToolExecutionFailed {
-                tool: "scroll".to_string(),
-                reason: e.to_string(),
-            })?;
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "scroll".to_string(), reason: e.to_string() })?;
 
         // Parse the JSON string returned by JavaScript
-        let result_json: serde_json::Value =
-            if let Some(serde_json::Value::String(json_str)) = result.value {
-                serde_json::from_str(&json_str)
-                    .unwrap_or(serde_json::json!({"actualScroll": 0, "isAtBottom": false}))
-            } else {
-                result
-                    .value
-                    .unwrap_or(serde_json::json!({"actualScroll": 0, "isAtBottom": false}))
-            };
+        let result_json: serde_json::Value = if let Some(serde_json::Value::String(json_str)) = result.value {
+            serde_json::from_str(&json_str).unwrap_or(serde_json::json!({"actualScroll": 0, "isAtBottom": false}))
+        } else {
+            result.value.unwrap_or(serde_json::json!({"actualScroll": 0, "isAtBottom": false}))
+        };
 
         let actual_scroll = result_json["actualScroll"].as_i64().unwrap_or(0);
         let is_at_bottom = result_json["isAtBottom"].as_bool().unwrap_or(false);
 
         let message = if is_at_bottom {
-            format!(
-                "Scrolled {} pixels. Reached the bottom of the page.",
-                actual_scroll
-            )
+            format!("Scrolled {} pixels. Reached the bottom of the page.", actual_scroll)
         } else {
-            format!(
-                "Scrolled {} pixels. Did not reach the bottom of the page.",
-                actual_scroll
-            )
+            format!("Scrolled {} pixels. Did not reach the bottom of the page.", actual_scroll)
         };
 
         Ok(ToolResult::success_with(serde_json::json!({

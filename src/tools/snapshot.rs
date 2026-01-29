@@ -23,11 +23,7 @@ impl Tool for SnapshotTool {
         "snapshot"
     }
 
-    fn execute_typed(
-        &self,
-        params: SnapshotParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: SnapshotParams, context: &mut ToolContext) -> Result<ToolResult> {
         // Get or extract the DOM tree
         let dom = context.get_dom()?;
 
@@ -85,14 +81,7 @@ pub fn render_aria_tree(root: &AriaNode, mode: RenderMode, previous: Option<&Ari
                 visit_text(text, "", &mut lines);
             }
             AriaChild::Node(node) => {
-                visit(
-                    node,
-                    "",
-                    render_cursor_pointer,
-                    render_active,
-                    &mut lines,
-                    previous,
-                );
+                visit(node, "", render_cursor_pointer, render_active, &mut lines, previous);
             }
         }
     }
@@ -105,14 +94,7 @@ fn render_single_node(root: &AriaNode, mode: RenderMode, previous: Option<&AriaN
     let render_cursor_pointer = matches!(mode, RenderMode::Ai);
     let render_active = matches!(mode, RenderMode::Ai);
 
-    visit(
-        root,
-        "",
-        render_cursor_pointer,
-        render_active,
-        &mut lines,
-        previous,
-    );
+    visit(root, "", render_cursor_pointer, render_active, &mut lines, previous);
 
     lines.join("\n")
 }
@@ -144,29 +126,19 @@ fn visit(
         lines.push(escaped_key);
     } else if let Some(text) = single_text_child {
         // Leaf node with just text inside
-        lines.push(format!(
-            "{}: {}",
-            escaped_key,
-            yaml_escape_value_if_needed(&text)
-        ));
+        lines.push(format!("{}: {}", escaped_key, yaml_escape_value_if_needed(&text)));
     } else {
         // Node with props and/or children
         lines.push(format!("{}:", escaped_key));
 
         // Render props
         for (name, value) in &aria_node.props {
-            lines.push(format!(
-                "{}  - /{}: {}",
-                indent,
-                name,
-                yaml_escape_value_if_needed(value)
-            ));
+            lines.push(format!("{}  - /{}: {}", indent, name, yaml_escape_value_if_needed(value)));
         }
 
         // Render children
         let child_indent = format!("{}  ", indent);
-        let in_cursor_pointer =
-            aria_node.index.is_some() && render_cursor_pointer && aria_node.has_pointer_cursor();
+        let in_cursor_pointer = aria_node.index.is_some() && render_cursor_pointer && aria_node.has_pointer_cursor();
 
         for child in &aria_node.children {
             match child {
@@ -266,9 +238,7 @@ mod tests {
     fn test_render_simple_tree() {
         let mut root = AriaNode::fragment();
         root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "Click me")
-                .with_index(0)
-                .with_box(true, Some("pointer".to_string())),
+            AriaNode::new("button", "Click me").with_index(0).with_box(true, Some("pointer".to_string())),
         )));
 
         let yaml = render_aria_tree(&root, RenderMode::Ai, None);
@@ -281,8 +251,7 @@ mod tests {
     #[test]
     fn test_render_tree_with_text() {
         let mut root = AriaNode::fragment();
-        root.children
-            .push(AriaChild::Text("Hello world".to_string()));
+        root.children.push(AriaChild::Text("Hello world".to_string()));
 
         let yaml = render_aria_tree(&root, RenderMode::Ai, None);
         eprintln!("YAML output:\n{}", yaml);
@@ -294,11 +263,8 @@ mod tests {
     fn test_render_nested_tree() {
         let mut root = AriaNode::fragment();
         let mut div = AriaNode::new("generic", "");
-        div.children
-            .push(AriaChild::Text("Parent text".to_string()));
-        div.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "Child button").with_index(0),
-        )));
+        div.children.push(AriaChild::Text("Parent text".to_string()));
+        div.children.push(AriaChild::Node(Box::new(AriaNode::new("button", "Child button").with_index(0))));
 
         root.children.push(AriaChild::Node(Box::new(div)));
 
@@ -313,9 +279,7 @@ mod tests {
     fn test_render_with_props() {
         let mut root = AriaNode::fragment();
         root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("link", "Go to page")
-                .with_index(0)
-                .with_prop("url", "https://example.com"),
+            AriaNode::new("link", "Go to page").with_index(0).with_prop("url", "https://example.com"),
         )));
 
         let yaml = render_aria_tree(&root, RenderMode::Ai, None);
@@ -330,10 +294,7 @@ mod tests {
     fn test_render_with_aria_states() {
         let mut root = AriaNode::fragment();
         root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("checkbox", "Accept terms")
-                .with_index(0)
-                .with_checked(true)
-                .with_disabled(false),
+            AriaNode::new("checkbox", "Accept terms").with_index(0).with_checked(true).with_disabled(false),
         )));
 
         let yaml = render_aria_tree(&root, RenderMode::Ai, None);
@@ -346,9 +307,7 @@ mod tests {
     #[test]
     fn test_render_heading_with_level() {
         let mut root = AriaNode::fragment();
-        root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("heading", "Page Title").with_level(1),
-        )));
+        root.children.push(AriaChild::Node(Box::new(AriaNode::new("heading", "Page Title").with_level(1))));
 
         let yaml = render_aria_tree(&root, RenderMode::Ai, None);
         assert!(yaml.contains("heading"));

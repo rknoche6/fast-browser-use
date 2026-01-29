@@ -43,19 +43,13 @@ mod tests {
     fn test_normalize_url_complete() {
         assert_eq!(normalize_url("https://example.com"), "https://example.com");
         assert_eq!(normalize_url("http://example.com"), "http://example.com");
-        assert_eq!(
-            normalize_url("https://example.com/path"),
-            "https://example.com/path"
-        );
+        assert_eq!(normalize_url("https://example.com/path"), "https://example.com/path");
     }
 
     #[test]
     fn test_normalize_url_missing_protocol() {
         assert_eq!(normalize_url("example.com"), "https://example.com");
-        assert_eq!(
-            normalize_url("example.com/path"),
-            "https://example.com/path"
-        );
+        assert_eq!(normalize_url("example.com/path"), "https://example.com/path");
         assert_eq!(normalize_url("sub.example.com"), "https://sub.example.com");
     }
 
@@ -77,14 +71,8 @@ mod tests {
     #[test]
     fn test_normalize_url_special_protocols() {
         assert_eq!(normalize_url("about:blank"), "about:blank");
-        assert_eq!(
-            normalize_url("file:///path/to/file"),
-            "file:///path/to/file"
-        );
-        assert_eq!(
-            normalize_url("data:text/html,<h1>Test</h1>"),
-            "data:text/html,<h1>Test</h1>"
-        );
+        assert_eq!(normalize_url("file:///path/to/file"), "file:///path/to/file");
+        assert_eq!(normalize_url("data:text/html,<h1>Test</h1>"), "data:text/html,<h1>Test</h1>");
         assert_eq!(normalize_url("chrome://settings"), "chrome://settings");
     }
 
@@ -99,9 +87,6 @@ mod tests {
     #[test]
     fn test_normalize_url_whitespace() {
         assert_eq!(normalize_url("  example.com  "), "https://example.com");
-        assert_eq!(
-            normalize_url("  https://example.com  "),
-            "https://example.com"
-        );
+        assert_eq!(normalize_url("  https://example.com  "), "https://example.com");
     }
 }

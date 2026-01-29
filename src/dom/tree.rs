@@ -29,11 +29,7 @@ struct SnapshotResponse {
 impl DomTree {
     /// Create a new DomTree from an AriaNode
     pub fn new(root: AriaNode) -> Self {
-        let mut tree = Self {
-            root,
-            selectors: Vec::new(),
-            iframe_indices: Vec::new(),
-        };
+        let mut tree = Self { root, selectors: Vec::new(), iframe_indices: Vec::new() };
         tree.rebuild_maps();
         tree
     }
@@ -50,30 +46,24 @@ impl DomTree {
         let js_code = include_str!("extract_dom.js");
 
         // Execute JavaScript to extract DOM
-        let result = tab.evaluate(js_code, false).map_err(|e| {
-            BrowserError::DomParseFailed(format!("Failed to execute DOM extraction script: {}", e))
-        })?;
+        let result = tab
+            .evaluate(js_code, false)
+            .map_err(|e| BrowserError::DomParseFailed(format!("Failed to execute DOM extraction script: {}", e)))?;
 
         // Get the JSON string value
-        let json_value = result.value.ok_or_else(|| {
-            BrowserError::DomParseFailed("No value returned from DOM extraction".to_string())
-        })?;
+        let json_value = result
+            .value
+            .ok_or_else(|| BrowserError::DomParseFailed("No value returned from DOM extraction".to_string()))?;
 
         // The JavaScript returns a JSON string, so we need to parse it as a string first
-        let json_str: String = serde_json::from_value(json_value).map_err(|e| {
-            BrowserError::DomParseFailed(format!("Failed to get JSON string: {}", e))
-        })?;
+        let json_str: String = serde_json::from_value(json_value)
+            .map_err(|e| BrowserError::DomParseFailed(format!("Failed to get JSON string: {}", e)))?;
 
         // Then parse the JSON string into SnapshotResponse
-        let response: SnapshotResponse = serde_json::from_str(&json_str).map_err(|e| {
-            BrowserError::DomParseFailed(format!("Failed to parse snapshot JSON: {}", e))
-        })?;
+        let response: SnapshotResponse = serde_json::from_str(&json_str)
+            .map_err(|e| BrowserError::DomParseFailed(format!("Failed to parse snapshot JSON: {}", e)))?;
 
-        Ok(Self {
-            root: response.root,
-            selectors: response.selectors,
-            iframe_indices: response.iframe_indices,
-        })
+        Ok(Self { root: response.root, selectors: response.selectors, iframe_indices: response.iframe_indices })
     }
 
     /// Rebuild the selectors array by traversing the tree
@@ -179,9 +169,8 @@ impl DomTree {
 
     /// Convert the DOM tree to JSON
     pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(&self.root).map_err(|e| {
-            BrowserError::DomParseFailed(format!("Failed to serialize DOM to JSON: {}", e))
-        })
+        serde_json::to_string_pretty(&self.root)
+            .map_err(|e| BrowserError::DomParseFailed(format!("Failed to serialize DOM to JSON: {}", e)))
     }
 
     /// Replace an iframe node's children with content from another snapshot
@@ -232,16 +221,11 @@ mod tests {
         let mut root = AriaNode::fragment();
 
         root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "Click me")
-                .with_index(0)
-                .with_box(true, Some("pointer".to_string())),
+            AriaNode::new("button", "Click me").with_index(0).with_box(true, Some("pointer".to_string())),
         )));
 
-        root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("link", "Go to page")
-                .with_index(1)
-                .with_box(true, None),
-        )));
+        root.children
+            .push(AriaChild::Node(Box::new(AriaNode::new("link", "Go to page").with_index(1).with_box(true, None))));
 
         root.children.push(AriaChild::Node(Box::new(
             AriaNode::new("paragraph", "").with_child(AriaChild::Text("Some text".to_string())),
@@ -287,14 +271,10 @@ mod tests {
     #[test]
     fn test_inject_iframe_content() {
         let mut main_tree = AriaNode::fragment();
-        main_tree.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("iframe", "").with_index(0),
-        )));
+        main_tree.children.push(AriaChild::Node(Box::new(AriaNode::new("iframe", "").with_index(0))));
 
         let mut iframe_tree = AriaNode::fragment();
-        iframe_tree.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "Inside iframe").with_index(0),
-        )));
+        iframe_tree.children.push(AriaChild::Node(Box::new(AriaNode::new("button", "Inside iframe").with_index(0))));
 
         let mut main = DomTree::new(main_tree);
         let iframe = DomTree::new(iframe_tree);

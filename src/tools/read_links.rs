@@ -24,11 +24,7 @@ impl Tool for ReadLinksTool {
         "read_links"
     }
 
-    fn execute_typed(
-        &self,
-        _params: ReadLinksParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, _params: ReadLinksParams, context: &mut ToolContext) -> Result<ToolResult> {
         // JavaScript code to extract all links on the page
         // We use JSON.stringify to ensure the result is returned properly
         let js_code = r#"

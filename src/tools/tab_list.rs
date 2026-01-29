@@ -31,11 +31,7 @@ impl Tool for TabListTool {
         "tab_list"
     }
 
-    fn execute_typed(
-        &self,
-        _params: TabListParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, _params: TabListParams, context: &mut ToolContext) -> Result<ToolResult> {
         // Get all tabs
         let tabs = context.session.get_tabs()?;
         let active_tab = context.session.tab()?;
@@ -52,12 +48,7 @@ impl Tool for TabListTool {
             // Get tab URL (not a Result, returns String directly)
             let url = tab.get_url();
 
-            tab_list.push(TabInfo {
-                index,
-                active: is_active,
-                title,
-                url,
-            });
+            tab_list.push(TabInfo { index, active: is_active, title, url });
         }
 
         // Build summary text
@@ -71,10 +62,7 @@ impl Tool for TabListTool {
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            format!(
-                "Current Tab: [{}] {}\nAll Tabs:\n{}",
-                active_index, active_info.title, all_tabs_str
-            )
+            format!("Current Tab: [{}] {}\nAll Tabs:\n{}", active_index, active_info.title, all_tabs_str)
         } else {
             "No tabs available".to_string()
         };

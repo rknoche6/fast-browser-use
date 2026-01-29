@@ -25,16 +25,15 @@ impl Tool for NewTabTool {
 
     fn execute_typed(&self, params: NewTabParams, context: &mut ToolContext) -> Result<ToolResult> {
         let normalized_url = normalize_url(&params.url);
-        let tab = context.session.browser().new_tab().map_err(|e| {
-            crate::error::BrowserError::TabOperationFailed(format!("Failed to create tab: {}", e))
-        })?;
+        let tab = context
+            .session
+            .browser()
+            .new_tab()
+            .map_err(|e| crate::error::BrowserError::TabOperationFailed(format!("Failed to create tab: {}", e)))?;
 
         // Navigate to the normalized URL
         tab.navigate_to(&normalized_url).map_err(|e| {
-            crate::error::BrowserError::NavigationFailed(format!(
-                "Failed to navigate to {}: {}",
-                normalized_url, e
-            ))
+            crate::error::BrowserError::NavigationFailed(format!("Failed to navigate to {}: {}", normalized_url, e))
         })?;
 
         // Wait for navigation to complete
@@ -46,9 +45,8 @@ impl Tool for NewTabTool {
         })?;
 
         // Bring the new tab to front
-        tab.activate().map_err(|e| {
-            crate::error::BrowserError::TabOperationFailed(format!("Failed to activate tab: {}", e))
-        })?;
+        tab.activate()
+            .map_err(|e| crate::error::BrowserError::TabOperationFailed(format!("Failed to activate tab: {}", e)))?;
 
         let snapshot = {
             let dom = context.get_dom()?;

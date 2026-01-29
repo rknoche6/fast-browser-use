@@ -38,10 +38,7 @@ mod tests {
         let html = "<h1>Test Title</h1>";
         let md = convert_html_to_markdown(html);
         // html2md may format headings differently, just check the text is present
-        assert!(
-            md.contains("Test Title"),
-            "Markdown should contain the title text"
-        );
+        assert!(md.contains("Test Title"), "Markdown should contain the title text");
     }
 
     #[test]

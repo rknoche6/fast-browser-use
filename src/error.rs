@@ -85,22 +85,13 @@ mod tests {
     #[test]
     fn test_error_display() {
         let err = BrowserError::LaunchFailed("Chrome not found".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Failed to launch browser: Chrome not found"
-        );
+        assert_eq!(err.to_string(), "Failed to launch browser: Chrome not found");
     }
 
     #[test]
     fn test_tool_execution_error() {
-        let err = BrowserError::ToolExecutionFailed {
-            tool: "navigate".to_string(),
-            reason: "Invalid URL".to_string(),
-        };
-        assert_eq!(
-            err.to_string(),
-            "Tool 'navigate' execution failed: Invalid URL"
-        );
+        let err = BrowserError::ToolExecutionFailed { tool: "navigate".to_string(), reason: "Invalid URL".to_string() };
+        assert_eq!(err.to_string(), "Tool 'navigate' execution failed: Invalid URL");
     }
 
     #[test]

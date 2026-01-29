@@ -24,11 +24,7 @@ impl Tool for EvaluateTool {
         "evaluate"
     }
 
-    fn execute_typed(
-        &self,
-        params: EvaluateParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: EvaluateParams, context: &mut ToolContext) -> Result<ToolResult> {
         let result = context
             .session
             .tab()?

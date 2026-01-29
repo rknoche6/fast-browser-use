@@ -5,11 +5,13 @@ use log::info;
 #[ignore] // Requires Chrome to be installed
 fn test_dom_extraction() {
     // Launch browser
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Navigate to a simple page
-    session.navigate("data:text/html,<html><body><button id='test-btn'>Click me</button><a href='#'>Link</a></body></html>")
+    session
+        .navigate(
+            "data:text/html,<html><body><button id='test-btn'>Click me</button><a href='#'>Link</a></body></html>",
+        )
         .expect("Failed to navigate");
 
     // Extract DOM
@@ -32,12 +34,12 @@ fn test_dom_extraction() {
 #[test]
 #[ignore]
 fn test_simplified_dom_extraction() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Page with script and style tags that should be removed
     // Use a simple HTML page
-    session.navigate("data:text/html,<html><head></head><body><p>Hello</p><button>Click</button></body></html>")
+    session
+        .navigate("data:text/html,<html><head></head><body><p>Hello</p><button>Click</button></body></html>")
         .expect("Failed to navigate");
 
     // Small delay to let page render
@@ -57,8 +59,7 @@ fn test_simplified_dom_extraction() {
 fn test_read_links() {
     use browser_use::tools::{ReadLinksParams, Tool, ToolContext, read_links::ReadLinksTool};
 
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     let html = concat!(
         "<html><head><title>Links Test</title></head><body>",
@@ -71,18 +72,14 @@ fn test_read_links() {
         "</body></html>"
     );
 
-    session
-        .navigate(&format!("data:text/html,{}", html))
-        .expect("Failed navigate");
+    session.navigate(&format!("data:text/html,{}", html)).expect("Failed navigate");
 
     std::thread::sleep(std::time::Duration::from_millis(500));
 
     let tool = ReadLinksTool::default();
     let mut context = ToolContext::new(&session);
 
-    let result = tool
-        .execute_typed(ReadLinksParams {}, &mut context)
-        .expect("Failed execute");
+    let result = tool.execute_typed(ReadLinksParams {}, &mut context).expect("Failed execute");
 
     assert!(result.success);
     let data = result.data.unwrap();
@@ -91,11 +88,7 @@ fn test_read_links() {
 
     info!("Links found: {}", count);
     for link in links {
-        info!(
-            "  {} -> {}",
-            link["text"].as_str().unwrap_or(""),
-            link["href"].as_str().unwrap_or("")
-        );
+        info!("  {} -> {}", link["text"].as_str().unwrap_or(""), link["href"].as_str().unwrap_or(""));
     }
 
     // Due to data: URL limitations, we may not get all links
@@ -109,10 +102,7 @@ fn test_read_links() {
     assert!(texts.contains(&"Relative"));
 
     // Verify href values
-    let ex_link = links
-        .iter()
-        .find(|l| l["text"].as_str() == Some("Example"))
-        .expect("Example link not found");
+    let ex_link = links.iter().find(|l| l["text"].as_str() == Some("Example")).expect("Example link not found");
     assert_eq!(ex_link["href"].as_str(), Some("https://example.com"));
 }
 
@@ -121,8 +111,7 @@ fn test_read_links() {
 fn test_press_key_enter() {
     use browser_use::tools::{PressKeyParams, Tool, ToolContext, press_key::PressKeyTool};
 
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a page with an input field that responds to Enter key
     let html = r#"
@@ -142,20 +131,12 @@ fn test_press_key_enter() {
         </html>
     "#;
 
-    session
-        .navigate(&format!("data:text/html,{}", html))
-        .expect("Failed to navigate");
+    session.navigate(&format!("data:text/html,{}", html)).expect("Failed to navigate");
 
     std::thread::sleep(std::time::Duration::from_millis(500));
 
     // Focus the input element first
-    session
-        .tab()
-        .unwrap()
-        .find_element("#input1")
-        .expect("Input not found")
-        .click()
-        .expect("Failed to click input");
+    session.tab().unwrap().find_element("#input1").expect("Input not found").click().expect("Failed to click input");
 
     std::thread::sleep(std::time::Duration::from_millis(200));
 
@@ -165,12 +146,7 @@ fn test_press_key_enter() {
 
     // Execute the tool to press Enter
     let result = tool
-        .execute_typed(
-            PressKeyParams {
-                key: "Enter".to_string(),
-            },
-            &mut context,
-        )
+        .execute_typed(PressKeyParams { key: "Enter".to_string() }, &mut context)
         .expect("Failed to execute press_key tool");
 
     // Verify the result
@@ -183,22 +159,12 @@ fn test_press_key_enter() {
     std::thread::sleep(std::time::Duration::from_millis(200));
 
     // Verify that the event was triggered
-    let output = session
-        .tab()
-        .unwrap()
-        .wait_for_element("#output")
-        .ok()
-        .and_then(|elem| elem.get_inner_text().ok());
+    let output = session.tab().unwrap().wait_for_element("#output").ok().and_then(|elem| elem.get_inner_text().ok());
 
     info!("Output after Enter key: {:?}", output);
 
     // 校验 output 内容
-    assert_eq!(
-        output.as_deref(),
-        Some("Enter pressed!"),
-        "Output should be 'Enter pressed!', but was: {:?}",
-        output
-    );
+    assert_eq!(output.as_deref(), Some("Enter pressed!"), "Output should be 'Enter pressed!', but was: {:?}", output);
     // Note: Due to limitations with data: URLs and event handling,
     // we mainly verify that the tool executes without error
 }

@@ -6,8 +6,7 @@ use log::info;
 #[test]
 #[ignore] // Requires Chrome to be installed
 fn test_basic_markdown_extraction() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a simple article page
     let html = r#"
@@ -36,35 +35,22 @@ fn test_basic_markdown_extraction() {
     let mut context = ToolContext::new(&session);
 
     // Execute the tool
-    let result = tool
-        .execute_typed(GetMarkdownParams::default(), &mut context)
-        .expect("Failed to execute markdown tool");
+    let result =
+        tool.execute_typed(GetMarkdownParams::default(), &mut context).expect("Failed to execute markdown tool");
 
     // Verify the result
     assert!(result.success, "Tool execution should succeed");
     assert!(result.data.is_some());
 
     let data = result.data.unwrap();
-    info!(
-        "Markdown result: {}",
-        serde_json::to_string_pretty(&data).unwrap()
-    );
+    info!("Markdown result: {}", serde_json::to_string_pretty(&data).unwrap());
 
     let markdown = data["markdown"].as_str().expect("Should have markdown");
 
     // Verify content was extracted
-    assert!(
-        markdown.contains("Main Article Title"),
-        "Should contain title"
-    );
-    assert!(
-        markdown.contains("first paragraph"),
-        "Should contain first paragraph"
-    );
-    assert!(
-        markdown.contains("second paragraph"),
-        "Should contain second paragraph"
-    );
+    assert!(markdown.contains("Main Article Title"), "Should contain title");
+    assert!(markdown.contains("first paragraph"), "Should contain first paragraph");
+    assert!(markdown.contains("second paragraph"), "Should contain second paragraph");
 
     // Verify metadata
     assert_eq!(data["currentPage"].as_u64(), Some(1));
@@ -76,8 +62,7 @@ fn test_basic_markdown_extraction() {
 #[test]
 #[ignore]
 fn test_readability_filtering() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a page with navigation, sidebar, and main content
     let html = r#"
@@ -122,9 +107,8 @@ fn test_readability_filtering() {
     let tool = GetMarkdownTool::default();
     let mut context = ToolContext::new(&session);
 
-    let result = tool
-        .execute_typed(GetMarkdownParams::default(), &mut context)
-        .expect("Failed to execute markdown tool");
+    let result =
+        tool.execute_typed(GetMarkdownParams::default(), &mut context).expect("Failed to execute markdown tool");
 
     assert!(result.success);
     let data = result.data.unwrap();
@@ -133,14 +117,8 @@ fn test_readability_filtering() {
     info!("Extracted markdown:\n{}", markdown);
 
     // Main content should be present
-    assert!(
-        markdown.contains("Important Article"),
-        "Should contain article title"
-    );
-    assert!(
-        markdown.contains("main content"),
-        "Should contain main content"
-    );
+    assert!(markdown.contains("Important Article"), "Should contain article title");
+    assert!(markdown.contains("main content"), "Should contain main content");
 
     // The exact filtering depends on Readability's algorithm
     // In some cases, it might include navigation/footer if the article is too short
@@ -151,8 +129,7 @@ fn test_readability_filtering() {
 #[test]
 #[ignore]
 fn test_markdown_pagination() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a long article that will require multiple pages
     let mut paragraphs = String::new();
@@ -203,42 +180,24 @@ fn test_markdown_pagination() {
     assert!(result.success);
     let data = result.data.unwrap();
 
-    info!(
-        "Pagination result: {}",
-        serde_json::to_string_pretty(&data).unwrap()
-    );
+    info!("Pagination result: {}", serde_json::to_string_pretty(&data).unwrap());
 
     let markdown = data["markdown"].as_str().expect("Should have markdown");
-    let current_page = data["currentPage"]
-        .as_u64()
-        .expect("Should have currentPage");
+    let current_page = data["currentPage"].as_u64().expect("Should have currentPage");
     let total_pages = data["totalPages"].as_u64().expect("Should have totalPages");
-    let has_more = data["hasMorePages"]
-        .as_bool()
-        .expect("Should have hasMorePages");
+    let has_more = data["hasMorePages"].as_bool().expect("Should have hasMorePages");
 
     // Verify pagination
     assert_eq!(current_page, 1);
-    assert!(
-        total_pages > 1,
-        "Should have multiple pages, got total_pages={}",
-        total_pages
-    );
+    assert!(total_pages > 1, "Should have multiple pages, got total_pages={}", total_pages);
     assert!(has_more, "Should have more pages");
 
     // Verify title is on first page (either the original or what Readability extracted)
     let title_present = markdown.contains("Very Long Article") || markdown.contains("Long Article");
-    assert!(
-        title_present,
-        "First page should have title. Markdown: {}",
-        &markdown[..200.min(markdown.len())]
-    );
+    assert!(title_present, "First page should have title. Markdown: {}", &markdown[..200.min(markdown.len())]);
 
     // Verify pagination footer
-    assert!(
-        markdown.contains("Page 1 of"),
-        "Should have pagination info"
-    );
+    assert!(markdown.contains("Page 1 of"), "Should have pagination info");
     assert!(markdown.contains("more page"), "Should indicate more pages");
 
     // Note: Testing second page in the same session sometimes fails due to
@@ -273,8 +232,7 @@ fn test_markdown_pagination() {
 #[test]
 #[ignore]
 fn test_empty_page() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     let html = r#"
         <!DOCTYPE html>
@@ -315,8 +273,7 @@ fn test_empty_page() {
 #[test]
 #[ignore]
 fn test_table_conversion() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     let html = r#"
         <!DOCTYPE html>
@@ -361,9 +318,8 @@ fn test_table_conversion() {
     let tool = GetMarkdownTool::default();
     let mut context = ToolContext::new(&session);
 
-    let result = tool
-        .execute_typed(GetMarkdownParams::default(), &mut context)
-        .expect("Failed to execute markdown tool");
+    let result =
+        tool.execute_typed(GetMarkdownParams::default(), &mut context).expect("Failed to execute markdown tool");
 
     assert!(result.success);
     let data = result.data.unwrap();
@@ -386,8 +342,7 @@ fn test_table_conversion() {
 #[test]
 #[ignore]
 fn test_double_execution_same_page() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     // Create a simple article page
     let html = r#"
@@ -426,14 +381,8 @@ fn test_double_execution_same_page() {
     let markdown1 = data1["markdown"].as_str().expect("Should have markdown");
 
     info!("First call succeeded, markdown length: {}", markdown1.len());
-    assert!(
-        markdown1.contains("Test Article"),
-        "First call should contain title"
-    );
-    assert!(
-        markdown1.contains("paragraph one"),
-        "First call should contain content"
-    );
+    assert!(markdown1.contains("Test Article"), "First call should contain title");
+    assert!(markdown1.contains("paragraph one"), "First call should contain content");
 
     // Second execution on the same page - this is where the bug occurs
     info!("Executing get_markdown (second call on same page)...");
@@ -445,24 +394,12 @@ fn test_double_execution_same_page() {
     let data2 = result2.data.expect("Second call should return data");
     let markdown2 = data2["markdown"].as_str().expect("Should have markdown");
 
-    info!(
-        "Second call succeeded, markdown length: {}",
-        markdown2.len()
-    );
-    assert!(
-        markdown2.contains("Test Article"),
-        "Second call should contain title"
-    );
-    assert!(
-        markdown2.contains("paragraph one"),
-        "Second call should contain content"
-    );
+    info!("Second call succeeded, markdown length: {}", markdown2.len());
+    assert!(markdown2.contains("Test Article"), "Second call should contain title");
+    assert!(markdown2.contains("paragraph one"), "Second call should contain content");
 
     // The content should be the same (or at least very similar)
-    assert_eq!(
-        markdown1, markdown2,
-        "Both calls should return the same content"
-    );
+    assert_eq!(markdown1, markdown2, "Both calls should return the same content");
 
     info!("Double execution test passed!");
 }
@@ -471,8 +408,7 @@ fn test_double_execution_same_page() {
 #[test]
 #[ignore]
 fn test_page_clamping() {
-    let session = BrowserSession::launch(LaunchOptions::new().headless(true))
-        .expect("Failed to launch browser");
+    let session = BrowserSession::launch(LaunchOptions::new().headless(true)).expect("Failed to launch browser");
 
     let html = r#"
         <!DOCTYPE html>
@@ -499,13 +435,7 @@ fn test_page_clamping() {
 
     // Request page 999 (way beyond available content)
     let result = tool
-        .execute_typed(
-            GetMarkdownParams {
-                page: 999,
-                page_size: 100_000,
-            },
-            &mut context,
-        )
+        .execute_typed(GetMarkdownParams { page: 999, page_size: 100_000 }, &mut context)
         .expect("Failed to execute markdown tool");
 
     assert!(result.success);

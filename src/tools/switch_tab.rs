@@ -21,11 +21,7 @@ impl Tool for SwitchTabTool {
         "switch_tab"
     }
 
-    fn execute_typed(
-        &self,
-        params: SwitchTabParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: SwitchTabParams, context: &mut ToolContext) -> Result<ToolResult> {
         // Get all tabs to validate index
         let tabs = context.session.get_tabs()?;
 
@@ -46,10 +42,7 @@ impl Tool for SwitchTabTool {
 
         // Activate the tab
         target_tab.activate().map_err(|e| {
-            crate::error::BrowserError::TabOperationFailed(format!(
-                "Failed to activate tab {}: {}",
-                params.index, e
-            ))
+            crate::error::BrowserError::TabOperationFailed(format!("Failed to activate tab {}: {}", params.index, e))
         })?;
 
         // Get updated tab info
@@ -64,10 +57,7 @@ impl Tool for SwitchTabTool {
             tab_list_str.push_str(&format!("[{}] {} ({})\n", idx, tab_title, tab_url));
         }
 
-        let summary = format!(
-            "Switched to tab {}\nAll Tabs:\n{}",
-            params.index, tab_list_str
-        );
+        let summary = format!("Switched to tab {}\nAll Tabs:\n{}", params.index, tab_list_str);
 
         Ok(ToolResult::success_with(serde_json::json!({
             "index": params.index,

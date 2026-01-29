@@ -31,11 +31,7 @@ impl Tool for NavigateTool {
         "navigate"
     }
 
-    fn execute_typed(
-        &self,
-        params: NavigateParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: NavigateParams, context: &mut ToolContext) -> Result<ToolResult> {
         // Normalize the URL
         let normalized_url = normalize_url(&params.url);
 

@@ -67,18 +67,12 @@ pub struct ToolContext<'a> {
 impl<'a> ToolContext<'a> {
     /// Create a new tool context
     pub fn new(session: &'a BrowserSession) -> Self {
-        Self {
-            session,
-            dom_tree: None,
-        }
+        Self { session, dom_tree: None }
     }
 
     /// Create a context with a pre-extracted DOM tree
     pub fn with_dom(session: &'a BrowserSession, dom_tree: DomTree) -> Self {
-        Self {
-            session,
-            dom_tree: Some(dom_tree),
-        }
+        Self { session, dom_tree: Some(dom_tree) }
     }
 
     /// Get or extract the DOM tree
@@ -112,32 +106,17 @@ pub struct ToolResult {
 impl ToolResult {
     /// Create a successful result
     pub fn success(data: Option<Value>) -> Self {
-        Self {
-            success: true,
-            data,
-            error: None,
-            metadata: HashMap::new(),
-        }
+        Self { success: true, data, error: None, metadata: HashMap::new() }
     }
 
     /// Create a successful result with data
     pub fn success_with<T: serde::Serialize>(data: T) -> Self {
-        Self {
-            success: true,
-            data: serde_json::to_value(data).ok(),
-            error: None,
-            metadata: HashMap::new(),
-        }
+        Self { success: true, data: serde_json::to_value(data).ok(), error: None, metadata: HashMap::new() }
     }
 
     /// Create a failure result
     pub fn failure(error: impl Into<String>) -> Self {
-        Self {
-            success: false,
-            data: None,
-            error: Some(error.into()),
-            metadata: HashMap::new(),
-        }
+        Self { success: false, data: None, error: Some(error.into()), metadata: HashMap::new() }
     }
 
     /// Add metadata to the result
@@ -165,9 +144,8 @@ pub trait Tool: Send + Sync + Default {
 
     /// Execute the tool with JSON parameters (default implementation)
     fn execute(&self, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
-        let typed_params: Self::Params = serde_json::from_value(params).map_err(|e| {
-            crate::error::BrowserError::InvalidArgument(format!("Invalid parameters: {}", e))
-        })?;
+        let typed_params: Self::Params = serde_json::from_value(params)
+            .map_err(|e| crate::error::BrowserError::InvalidArgument(format!("Invalid parameters: {}", e)))?;
         self.execute_typed(typed_params, context)
     }
 }
@@ -202,9 +180,7 @@ pub struct ToolRegistry {
 impl ToolRegistry {
     /// Create a new empty tool registry
     pub fn new() -> Self {
-        Self {
-            tools: HashMap::new(),
-        }
+        Self { tools: HashMap::new() }
     }
 
     /// Create a registry with default tools
@@ -272,12 +248,7 @@ impl ToolRegistry {
     }
 
     /// Execute a tool by name
-    pub fn execute(
-        &self,
-        name: &str,
-        params: Value,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    pub fn execute(&self, name: &str, params: Value, context: &mut ToolContext) -> Result<ToolResult> {
         match self.get(name) {
             Some(tool) => tool.execute(params, context),
             None => Ok(ToolResult::failure(format!("Tool '{}' not found", name))),

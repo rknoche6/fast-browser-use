@@ -34,10 +34,7 @@ impl Tool for WaitTool {
         context
             .session
             .tab()?
-            .wait_for_element_with_custom_timeout(
-                &params.selector,
-                Duration::from_millis(params.timeout_ms),
-            )
+            .wait_for_element_with_custom_timeout(&params.selector, Duration::from_millis(params.timeout_ms))
             .map_err(|e| {
                 BrowserError::Timeout(format!(
                     "Element '{}' not found within {} ms: {}",

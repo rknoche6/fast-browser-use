@@ -23,11 +23,7 @@ impl Tool for ScreenshotTool {
         "screenshot"
     }
 
-    fn execute_typed(
-        &self,
-        params: ScreenshotParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: ScreenshotParams, context: &mut ToolContext) -> Result<ToolResult> {
         let screenshot_data = context
             .session
             .tab()?
@@ -39,9 +35,8 @@ impl Tool for ScreenshotTool {
             )
             .map_err(|e| BrowserError::ScreenshotFailed(e.to_string()))?;
 
-        std::fs::write(&params.path, &screenshot_data).map_err(|e| {
-            BrowserError::ScreenshotFailed(format!("Failed to save screenshot: {}", e))
-        })?;
+        std::fs::write(&params.path, &screenshot_data)
+            .map_err(|e| BrowserError::ScreenshotFailed(format!("Failed to save screenshot: {}", e)))?;
 
         Ok(ToolResult::success_with(serde_json::json!({
             "path": params.path,

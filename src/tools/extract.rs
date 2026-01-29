@@ -28,37 +28,25 @@ impl Tool for ExtractContentTool {
         "extract"
     }
 
-    fn execute_typed(
-        &self,
-        params: ExtractParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: ExtractParams, context: &mut ToolContext) -> Result<ToolResult> {
         let content = if let Some(selector) = &params.selector {
             let tab = context.session.tab()?;
             let element = context.session.find_element(&tab, selector)?;
 
             if params.format == "html" {
-                element
-                    .get_content()
-                    .map_err(|e| BrowserError::ToolExecutionFailed {
-                        tool: "extract".to_string(),
-                        reason: e.to_string(),
-                    })?
+                element.get_content().map_err(|e| BrowserError::ToolExecutionFailed {
+                    tool: "extract".to_string(),
+                    reason: e.to_string(),
+                })?
             } else {
-                element
-                    .get_inner_text()
-                    .map_err(|e| BrowserError::ToolExecutionFailed {
-                        tool: "extract".to_string(),
-                        reason: e.to_string(),
-                    })?
+                element.get_inner_text().map_err(|e| BrowserError::ToolExecutionFailed {
+                    tool: "extract".to_string(),
+                    reason: e.to_string(),
+                })?
             }
         } else {
             // Extract from body
-            let js_code = if params.format == "html" {
-                "document.body.innerHTML"
-            } else {
-                "document.body.innerText"
-            };
+            let js_code = if params.format == "html" { "document.body.innerHTML" } else { "document.body.innerText" };
 
             let result = context
                 .session
@@ -66,10 +54,7 @@ impl Tool for ExtractContentTool {
                 .evaluate(js_code, false)
                 .map_err(|e| BrowserError::EvaluationFailed(e.to_string()))?;
 
-            result
-                .value
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_default()
+            result.value.and_then(|v| v.as_str().map(String::from)).unwrap_or_default()
         };
 
         Ok(ToolResult::success_with(serde_json::json!({

@@ -26,10 +26,7 @@ impl Tool for CloseTool {
         context
             .session
             .close()
-            .map_err(|e| BrowserError::ToolExecutionFailed {
-                tool: "close".to_string(),
-                reason: e.to_string(),
-            })?;
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "close".to_string(), reason: e.to_string() })?;
 
         Ok(ToolResult::success_with(serde_json::json!({
             "message": "Browser closed successfully"

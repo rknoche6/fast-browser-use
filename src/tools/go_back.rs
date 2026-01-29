@@ -18,18 +18,11 @@ impl Tool for GoBackTool {
         "go_back"
     }
 
-    fn execute_typed(
-        &self,
-        _params: GoBackParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, _params: GoBackParams, context: &mut ToolContext) -> Result<ToolResult> {
         context
             .session
             .go_back()
-            .map_err(|e| BrowserError::ToolExecutionFailed {
-                tool: "go_back".to_string(),
-                reason: e.to_string(),
-            })?;
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "go_back".to_string(), reason: e.to_string() })?;
 
         // Get current URL after going back
         let current_url = context.session.tab()?.get_url();

@@ -18,18 +18,11 @@ impl Tool for GoForwardTool {
         "go_forward"
     }
 
-    fn execute_typed(
-        &self,
-        _params: GoForwardParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, _params: GoForwardParams, context: &mut ToolContext) -> Result<ToolResult> {
         context
             .session
             .go_forward()
-            .map_err(|e| BrowserError::ToolExecutionFailed {
-                tool: "go_forward".to_string(),
-                reason: e.to_string(),
-            })?;
+            .map_err(|e| BrowserError::ToolExecutionFailed { tool: "go_forward".to_string(), reason: e.to_string() })?;
 
         // Get current URL after going forward
         let current_url = context.session.tab()?.get_url();

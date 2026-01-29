@@ -95,10 +95,7 @@ pub struct BoxInfo {
 
 impl Default for BoxInfo {
     fn default() -> Self {
-        Self {
-            visible: false,
-            cursor: None,
-        }
+        Self { visible: false, cursor: None }
     }
 }
 
@@ -188,10 +185,7 @@ impl AriaNode {
 
     /// Check if this node has pointer cursor
     pub fn has_pointer_cursor(&self) -> bool {
-        self.box_info
-            .cursor
-            .as_ref()
-            .map_or(false, |c| c == "pointer")
+        self.box_info.cursor.as_ref().map_or(false, |c| c == "pointer")
     }
 
     /// Check if this is a fragment or iframe
@@ -335,12 +329,7 @@ pub struct BoundingBox {
 
 impl BoundingBox {
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self {
-            x,
-            y,
-            width,
-            height,
-        }
+        Self { x, y, width, height }
     }
 
     pub fn is_visible(&self) -> bool {
@@ -358,9 +347,7 @@ mod tests {
 
     #[test]
     fn test_is_interactive() {
-        let interactive = AriaNode::new("button", "Click")
-            .with_index(0)
-            .with_box(true, None);
+        let interactive = AriaNode::new("button", "Click").with_index(0).with_box(true, None);
         assert!(interactive.is_interactive());
 
         let not_interactive = AriaNode::new("button", "Click").with_box(false, None);
@@ -375,8 +362,7 @@ mod tests {
         let with_pointer = AriaNode::new("button", "").with_box(true, Some("pointer".to_string()));
         assert!(with_pointer.has_pointer_cursor());
 
-        let without_pointer =
-            AriaNode::new("button", "").with_box(true, Some("default".to_string()));
+        let without_pointer = AriaNode::new("button", "").with_box(true, Some("default".to_string()));
         assert!(!without_pointer.has_pointer_cursor());
     }
 
@@ -394,12 +380,8 @@ mod tests {
     #[test]
     fn test_find_by_index() {
         let mut root = AriaNode::new("fragment", "");
-        root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "First").with_index(0),
-        )));
-        root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "Second").with_index(1),
-        )));
+        root.children.push(AriaChild::Node(Box::new(AriaNode::new("button", "First").with_index(0))));
+        root.children.push(AriaChild::Node(Box::new(AriaNode::new("button", "Second").with_index(1))));
 
         let found = root.find_by_index(1);
         assert!(found.is_some());
@@ -412,12 +394,8 @@ mod tests {
     #[test]
     fn test_count_interactive() {
         let mut root = AriaNode::fragment().with_index(0);
-        root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("button", "").with_index(1),
-        )));
-        root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("link", "").with_index(2),
-        )));
+        root.children.push(AriaChild::Node(Box::new(AriaNode::new("button", "").with_index(1))));
+        root.children.push(AriaChild::Node(Box::new(AriaNode::new("link", "").with_index(2))));
 
         let count = root.count_interactive();
         assert_eq!(count, 3); // root + button + link
@@ -425,19 +403,13 @@ mod tests {
 
     #[test]
     fn test_aria_equals() {
-        let node1 = AriaNode::new("button", "Click")
-            .with_disabled(false)
-            .with_box(true, Some("pointer".to_string()));
+        let node1 = AriaNode::new("button", "Click").with_disabled(false).with_box(true, Some("pointer".to_string()));
 
-        let node2 = AriaNode::new("button", "Click")
-            .with_disabled(false)
-            .with_box(true, Some("pointer".to_string()));
+        let node2 = AriaNode::new("button", "Click").with_disabled(false).with_box(true, Some("pointer".to_string()));
 
         assert!(node1.aria_equals(&node2));
 
-        let node3 = AriaNode::new("button", "Click")
-            .with_disabled(true)
-            .with_box(true, Some("pointer".to_string()));
+        let node3 = AriaNode::new("button", "Click").with_disabled(true).with_box(true, Some("pointer".to_string()));
 
         assert!(!node1.aria_equals(&node3));
     }
@@ -446,11 +418,9 @@ mod tests {
     fn test_count_nodes() {
         let mut root = AriaNode::fragment();
         root.children.push(AriaChild::Text("text".to_string()));
-        root.children
-            .push(AriaChild::Node(Box::new(AriaNode::new("button", ""))));
+        root.children.push(AriaChild::Node(Box::new(AriaNode::new("button", ""))));
         root.children.push(AriaChild::Node(Box::new(
-            AriaNode::new("div", "")
-                .with_child(AriaChild::Node(Box::new(AriaNode::new("span", "")))),
+            AriaNode::new("div", "").with_child(AriaChild::Node(Box::new(AriaNode::new("span", "")))),
         )));
 
         // root + button + div + span = 4

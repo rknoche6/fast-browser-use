@@ -26,10 +26,7 @@ fn default_page_size() -> usize {
 
 impl Default for GetMarkdownParams {
     fn default() -> Self {
-        Self {
-            page: default_page(),
-            page_size: default_page_size(),
-        }
+        Self { page: default_page(), page_size: default_page_size() }
     }
 }
 
@@ -43,11 +40,7 @@ impl Tool for GetMarkdownTool {
         "get_markdown"
     }
 
-    fn execute_typed(
-        &self,
-        params: GetMarkdownParams,
-        context: &mut ToolContext,
-    ) -> Result<ToolResult> {
+    fn execute_typed(&self, params: GetMarkdownParams, context: &mut ToolContext) -> Result<ToolResult> {
         // Wait for network idle with a timeout
         // Since headless_chrome doesn't have a direct network idle wait,
         // we add a small delay to let dynamic content load
@@ -101,9 +94,7 @@ impl Tool for GetMarkdownTool {
         if extraction_result.readability_failed {
             return Err(BrowserError::ToolExecutionFailed {
                 tool: "get_markdown".to_string(),
-                reason: extraction_result
-                    .error
-                    .unwrap_or_else(|| "Readability extraction failed".to_string()),
+                reason: extraction_result.error.unwrap_or_else(|| "Readability extraction failed".to_string()),
             });
         }
 
@@ -111,11 +102,8 @@ impl Tool for GetMarkdownTool {
         let full_markdown = convert_html_to_markdown(&extraction_result.content);
 
         // Calculate pagination information
-        let total_pages = if full_markdown.is_empty() {
-            1
-        } else {
-            (full_markdown.len() + params.page_size - 1) / params.page_size
-        };
+        let total_pages =
+            if full_markdown.is_empty() { 1 } else { (full_markdown.len() + params.page_size - 1) / params.page_size };
 
         // Clamp page number to valid range
         let current_page = params.page.clamp(1, total_pages.max(1));
@@ -125,11 +113,8 @@ impl Tool for GetMarkdownTool {
         let end_idx = (start_idx + params.page_size).min(full_markdown.len());
 
         // Extract the content for the current page
-        let mut page_content = if start_idx < full_markdown.len() {
-            full_markdown[start_idx..end_idx].to_string()
-        } else {
-            String::new()
-        };
+        let mut page_content =
+            if start_idx < full_markdown.len() { full_markdown[start_idx..end_idx].to_string() } else { String::new() };
 
         // Add title to the first page only
         if current_page == 1 && !extraction_result.title.is_empty() {
@@ -146,10 +131,7 @@ impl Tool for GetMarkdownTool {
                     total_pages - current_page
                 )
             } else {
-                format!(
-                    "\n\n---\n\n*Page {} of {}. This is the last page.*\n",
-                    current_page, total_pages
-                )
+                format!("\n\n---\n\n*Page {} of {}. This is the last page.*\n", current_page, total_pages)
             };
             page_content.push_str(&pagination_info);
         }
