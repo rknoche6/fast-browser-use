@@ -25,6 +25,7 @@ pub mod readability_script;
 pub mod screenshot;
 pub mod scroll;
 pub mod select;
+pub mod sitemap;
 pub mod snapshot;
 pub mod switch_tab;
 pub mod tab_list;
@@ -55,6 +56,7 @@ pub use read_links::ReadLinksParams;
 pub use screenshot::ScreenshotParams;
 pub use scroll::ScrollParams;
 pub use select::SelectParams;
+pub use sitemap::{SitemapParams, SitemapResult, PageStructure, Heading, NavLink, Section, MainContent, Meta};
 pub use snapshot::SnapshotParams;
 pub use switch_tab::SwitchTabParams;
 pub use tab_list::TabListParams;
@@ -242,6 +244,9 @@ impl ToolRegistry {
         registry.register(local_storage::SetLocalStorageTool);
         registry.register(local_storage::RemoveLocalStorageTool);
         registry.register(local_storage::ClearLocalStorageTool);
+
+        // Register sitemap tool
+        registry.register(sitemap::SitemapTool);
 
         registry
     }

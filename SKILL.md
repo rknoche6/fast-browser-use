@@ -98,6 +98,68 @@ fast-browser-use screenshot \
   --full-page  # Optional: capture entire scrollable page
 ```
 
+### 6. 🗺️ Sitemap & Page Structure Analyzer
+Discover how a site is organized by parsing sitemaps and analyzing page structure.
+
+```bash
+# Basic sitemap discovery (checks robots.txt + common sitemap URLs)
+fast-browser-use sitemap --url "https://example.com"
+```
+
+```bash
+# Full analysis with page structure (headings, nav, sections)
+fast-browser-use sitemap \
+  --url "https://example.com" \
+  --analyze-structure \
+  --max-pages 10 \
+  --max-sitemaps 5 \
+  --output site-structure.json
+```
+
+**Options:**
+- `--analyze-structure`: Also extract page structure (headings, nav, sections, meta)
+- `--max-pages N`: Limit structure analysis to N pages (default: 5)
+- `--max-sitemaps N`: Limit sitemap parsing to N sitemaps (default: 10, useful for large sites)
+
+**Example output:**
+```json
+{
+  "base_url": "https://example.com",
+  "robots_txt": "User-agent: *\nSitemap: https://example.com/sitemap.xml",
+  "sitemaps": ["https://example.com/sitemap.xml"],
+  "pages": [
+    "https://example.com/about",
+    "https://example.com/products",
+    "https://example.com/contact"
+  ],
+  "page_structures": [
+    {
+      "url": "https://example.com",
+      "title": "Example - Home",
+      "headings": [
+        {"level": 1, "text": "Welcome to Example"},
+        {"level": 2, "text": "Our Services"}
+      ],
+      "nav_links": [
+        {"text": "About", "href": "/about"},
+        {"text": "Products", "href": "/products"}
+      ],
+      "sections": [
+        {"tag": "main", "id": "content", "role": "main"},
+        {"tag": "footer", "id": "footer", "role": null}
+      ],
+      "main_content": {"tag": "main", "id": "content", "word_count": 450},
+      "meta": {
+        "description": "Example company homepage",
+        "canonical": "https://example.com/"
+      }
+    }
+  ]
+}
+```
+
+Use this to understand site architecture before scraping, map navigation flows, or audit SEO structure.
+
 ## ⚡ Performance Comparison
 
 | Feature | Fast Browser Use (Rust) | Puppeteer (Node) | Selenium (Java) |
@@ -114,6 +176,7 @@ fast-browser-use screenshot \
 - **screenshot**: Capture a visual image of the page.
 - **extract**: Get structured data from the DOM.
 - **markdown**: Convert the current page content to Markdown.
+- **sitemap**: Analyze site structure via robots.txt, sitemaps, and page semantic analysis.
 
 ### Navigation & Lifecycle
 - **navigate**: Visit a specific URL.

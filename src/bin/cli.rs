@@ -103,6 +103,28 @@ enum Commands {
         #[arg(long)]
         full_page: bool,
     },
+    /// Analyze sitemap and page structure
+    Sitemap {
+        /// Base URL of the site to analyze
+        #[arg(long)]
+        url: String,
+
+        /// Also analyze page structure (headings, sections, nav)
+        #[arg(long)]
+        analyze_structure: bool,
+
+        /// Maximum number of pages to analyze for structure (default: 5)
+        #[arg(long, default_value = "5")]
+        max_pages: usize,
+
+        /// Maximum number of sitemaps to parse (default: 10)
+        #[arg(long, default_value = "10")]
+        max_sitemaps: usize,
+
+        /// Output file (JSON)
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -307,10 +329,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Screenshot { url, output, full_page } => {
             info!("📸 Screenshotting {}", url);
             let session = BrowserSession::launch(LaunchOptions::default().sandbox(false))?;
-            
+
             session.navigate(&url)?;
             session.wait_for_navigation()?;
-            
+
             let tab = session.get_active_tab()?;
             let screenshot_data = tab.capture_screenshot(
                 headless_chrome::protocol::cdp::Page::CaptureScreenshotFormatOption::Png,
@@ -318,9 +340,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None,
                 !full_page,
             )?;
-            
+
             fs::write(&output, &screenshot_data)?;
             info!("✅ Saved screenshot to {:?}", output);
+        }
+        Commands::Sitemap { url, analyze_structure, max_pages, max_sitemaps, output } => {
+            info!("🗺️  Analyzing sitemap for {}", url);
+            let session = BrowserSession::launch(LaunchOptions::default().sandbox(false))?;
+
+            let sitemap_result = browser_use::tools::sitemap::analyze_sitemap(
+                &session,
+                &url,
+                analyze_structure,
+                max_pages,
+                max_sitemaps,
+            )?;
+
+            let json_output = serde_json::to_string_pretty(&sitemap_result)?;
+            if let Some(path) = output {
+                fs::write(&path, &json_output)?;
+                info!("✅ Saved sitemap analysis to {:?}", path);
+            } else {
+                println!("{}", json_output);
+            }
+
+            info!("✅ Sitemap analysis complete: {} sitemaps, {} pages found",
+                  sitemap_result.sitemaps.len(), sitemap_result.pages.len());
         }
     }
 
