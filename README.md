@@ -1,3 +1,6 @@
+Any contribution is very much welcome!
+Skill published in clawhub https://www.clawhub.ai/rknoche6/fast-browser-use
+
 # browser-use
 
 A lightweight Rust library for browser automation via Chrome DevTools Protocol (CDP).
