@@ -27,6 +27,8 @@ config:
 
 # Fastest Browser Use
 
+**GitHub:** https://github.com/rknoche6/fast-browser-use
+
 A Rust-based browser automation engine that provides a lightweight binary driving Chrome directly via CDP. It is optimized for token-efficient DOM extraction, robust session management, and speed.
 
 ![Terminal Demo](https://placehold.co/800x400/1e1e1e/ffffff?text=Terminal+Demo+Coming+Soon)
